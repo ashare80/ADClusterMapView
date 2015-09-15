@@ -77,7 +77,9 @@ static NSMutableSet *_clusterAnnotationsPool;
 }
 
 - (void)initHelpers {
-    
+    if(_clusterAnnotationsPool)
+        [_clusterAnnotationsPool removeAllObjects];
+
     [self setDefaults];
     
     _preClusterOperationQueue = [[NSOperationQueue alloc] init];
