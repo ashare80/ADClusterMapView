@@ -104,6 +104,11 @@ typedef NS_ENUM(NSInteger, ADClusterBufferSize) {
 - (void)addClusteredAnnotation:(id<MKAnnotation>)annotation clusterTreeRefresh:(BOOL)refresh;
 
 /*!
+ * @discussion Remove all annotations from the map view.  No refresh is performed because all annotations are removed.
+ */
+- (void)removeAllAnnotations;
+
+/*!
  * @discussion Force a refresh of clustering tree.
  */
 - (void)needsRefresh;

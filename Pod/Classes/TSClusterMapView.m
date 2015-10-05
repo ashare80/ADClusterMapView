@@ -308,6 +308,11 @@ NSString * const KDTreeClusteringProgress = @"KDTreeClusteringProgress";
     [super removeAnnotations:annotations];
 }
 
+- (void)removeAllAnnotations {
+    [super removeAnnotations:_clusterableAnnotationsAdded.allObjects];
+    [_clusterableAnnotationsAdded removeAllObjects];
+}
+
 #pragma mark - Annotations
 
 - (void)refreshClusterAnnotation:(ADClusterAnnotation *)annotation {
@@ -602,9 +607,11 @@ NSString * const KDTreeClusteringProgress = @"KDTreeClusteringProgress";
                                                              TSClusterMapView *strongSelf = weakSelf;
                                                              
                                                              
-                                                             [_preClusterOperationQueue addOperationWithBlock:^{
-                                                                 [strongSelf poolAnnotationsToRemove:poolAnnotationsToRemove];
-                                                             }];
+                                                             if (poolAnnotationsToRemove.count > 0) {
+                                                                 [_preClusterOperationQueue addOperationWithBlock:^{
+                                                                     [strongSelf poolAnnotationsToRemove:poolAnnotationsToRemove];
+                                                                 }];
+                                                             }
                                                              
                                                              if (finished) {
                                                                  strongSelf.previousVisibleMapRectClustered = clusteredRect;

@@ -99,6 +99,7 @@
     
     if (!_rootMapCluster.clusterCount) {
         [self resetAll];
+        self.finishedBlock(MKMapRectMake(0, 0, 0, 0), false, nil);
         return;
     }
     
