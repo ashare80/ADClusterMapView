@@ -415,6 +415,15 @@
             }
         } completion:^(BOOL finished) {
             
+            for (ADClusterAnnotation * annotation in _annotationPool) {
+                if (annotation.cluster) {
+                    annotation.coordinate = annotation.coordinatePostAnimation;
+                    [annotation.annotationView animateView];
+                    annotation.annotationView.transform = CGAffineTransformIdentity;
+                    annotation.popInAnimation = NO;
+                }
+            }
+            
             //Make sure selected if was previously offscreen
             if (annotationToSelect) {
                 [_mapView selectAnnotation:annotationToSelect animated:YES];
