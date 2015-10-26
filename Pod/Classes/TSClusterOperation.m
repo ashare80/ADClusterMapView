@@ -680,7 +680,7 @@
 
 - (void)mutateCoordinatesOfClashingAnnotations:(NSSet <ADClusterAnnotation *> *)annotations {
     
-    NSDictionary *coordinateValuesToAnnotations = [TSClusterOperation groupClusterAnnotationsByLocationValue:annotations];
+    NSDictionary *coordinateValuesToAnnotations = [TSClusterOperation groupLeafAnnotationsByLocationValue:annotations];
     
     for (NSValue *coordinateValue in coordinateValuesToAnnotations.allKeys) {
         NSMutableArray *outletsAtLocation = coordinateValuesToAnnotations[coordinateValue];
@@ -690,17 +690,50 @@
             [self repositionAnnotations:outletsAtLocation toAvoidClashAtCoordinate:coordinate];
         }
     }
+    
+    annotations = [annotations filteredSetUsingPredicate:[NSPredicate predicateWithBlock:^BOOL(ADClusterAnnotation * evaluatedObject, NSDictionary<NSString *,id> * _Nullable bindings) {
+        
+        return evaluatedObject.type == ADClusterAnnotationTypeCluster && evaluatedObject.cluster;
+    }]];
+    
+    for (ADClusterAnnotation *annotation in annotations) {
+        for (ADClusterAnnotation *compareAnnotation in annotations) {
+            if (compareAnnotation == annotation || [compareAnnotation.cluster.treeID isEqualToString:annotation.cluster.treeID]) {
+                continue;
+            }
+            
+            if ([annotation.cluster overlapsClusterOnMap:compareAnnotation.cluster annotationViewMapRectSize:[self mapRectAnnotationViewSize]]) {
+                [self repositionAnnotations:@[annotation, compareAnnotation] toAvoidClashAtCoordinate:CLLocationCoordinate2DMidPoint(annotation.cluster.clusterCoordinate, compareAnnotation.cluster.clusterCoordinate)];
+            }
+        }
+    }
+}
+
++ (NSDictionary <NSValue *, NSMutableArray <ADClusterAnnotation *> *>*)groupLeafAnnotationsByLocationValue:(NSSet <ADClusterAnnotation *>*)annotations {
+    
+    annotations = [annotations filteredSetUsingPredicate:[NSPredicate predicateWithBlock:^BOOL(ADClusterAnnotation * evaluatedObject, NSDictionary<NSString *,id> * _Nullable bindings) {
+        
+        return evaluatedObject.type == ADClusterAnnotationTypeLeaf && evaluatedObject.cluster;
+    }]];
+    
+    return [self groupClusterByLocationValue:annotations];
 }
 
 + (NSDictionary <NSValue *, NSMutableArray <ADClusterAnnotation *> *>*)groupClusterAnnotationsByLocationValue:(NSSet <ADClusterAnnotation *>*)annotations {
     
+    annotations = [annotations filteredSetUsingPredicate:[NSPredicate predicateWithBlock:^BOOL(ADClusterAnnotation * evaluatedObject, NSDictionary<NSString *,id> * _Nullable bindings) {
+        
+        return evaluatedObject.type == ADClusterAnnotationTypeCluster && evaluatedObject.cluster;
+    }]];
+    
+    return [self groupClusterByLocationValue:annotations];
+}
+
++ (NSDictionary <NSValue *, NSMutableArray <ADClusterAnnotation *> *>*)groupClusterByLocationValue:(NSSet <ADClusterAnnotation *>*)annotations {
+    
     NSMutableDictionary *result = [NSMutableDictionary dictionary];
     
     for (ADClusterAnnotation *pin in annotations) {
-        
-        if (!pin.cluster || pin.type == ADClusterAnnotationTypeCluster) {
-            continue;
-        }
         
         CLLocationCoordinate2D coordinate = CLLocationCoordinate2DRoundedLonLat(pin.cluster.clusterCoordinate, 5);
         NSValue *coordinateValue = [NSValue valueWithBytes:&coordinate objCType:@encode(CLLocationCoordinate2D)];
@@ -713,8 +746,10 @@
         
         [annotationsAtLocation addObject:pin];
     }
+    
     return result;
 }
+                                                          
 
 
 + (NSDictionary <NSValue *, NSMutableArray <id<MKAnnotation>> *>*)groupAnnotationsByLocationValue:(NSSet <id<MKAnnotation>>*)annotations {
@@ -745,15 +780,50 @@
         }
     }
     
-    double distance = 3 * annotations.count / 2.0;
+    MKMapRect mapViewRect = _mapView.visibleMapRect;
+    
+    CLLocationDistance width = MKMetersBetweenMapPoints(mapViewRect.origin, MKMapPointMake(mapViewRect.origin.x + mapViewRect.size.width, mapViewRect.origin.y));
+    CLLocationDistance height = MKMetersBetweenMapPoints(mapViewRect.origin, MKMapPointMake(mapViewRect.origin.x, mapViewRect.origin.y + mapViewRect.size.height));
+    CLLocationDistance minHeightWidth = MIN(width, height);
+    
+    
+    MKMapRect annotationRect = [self mapRectAnnotationViewSize];
+    
+    CLLocationDistance distance = minHeightWidth/8;
+    
+    if (!MKMapRectIsNull(annotationRect)) {
+        
+        MKMapPoint originPoint = annotationRect.origin;
+        MKMapPoint sizePoint = MKMapPointMake(annotationRect.origin.x + annotationRect.size.width, annotationRect.origin.y + annotationRect.size.height);
+        distance = MKMetersBetweenMapPoints(originPoint, sizePoint);
+    }
+    
+    CLLocationDistance maxRadius = minHeightWidth - (2 * distance);
+    
     double radiansBetweenAnnotations = (M_PI * 2) / annotations.count;
+    double radius = (distance * annotations.count)/(2 * M_PI);
+    
+    radius = MIN(maxRadius, radius);
+    
+    if (annotations.count == 2 && !CLLocationCoordinate2DIsApproxEqual(annotations.firstObject.cluster.clusterCoordinate, annotations.lastObject.cluster.clusterCoordinate, .00001) ) {
+        
+        
+        for (ADClusterAnnotation *annotation in annotations) {
+            double bearing = CLLocationCoordinate2DBearingRadians(coordinate, annotation.cluster.clusterCoordinate);
+            CLLocationCoordinate2D newCoordinate = [TSClusterOperation calculateCoordinateFrom:coordinate onBearing:bearing atDistance:radius];
+            
+            annotation.coordinatePostAnimation = newCoordinate;
+        }
+        
+        return;
+    }
     
     int i = 0;
     
     for (ADClusterAnnotation *annotation in annotations) {
         
-        double heading = radiansBetweenAnnotations * i;
-        CLLocationCoordinate2D newCoordinate = [TSClusterOperation calculateCoordinateFrom:coordinate onBearing:heading atDistance:distance];
+        double bearing = radiansBetweenAnnotations * i;
+        CLLocationCoordinate2D newCoordinate = [TSClusterOperation calculateCoordinateFrom:coordinate onBearing:bearing atDistance:radius];
         
         annotation.coordinatePostAnimation = newCoordinate;
         

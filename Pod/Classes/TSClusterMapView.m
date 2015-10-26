@@ -528,7 +528,7 @@ NSString * const KDTreeClusteringProgress = @"KDTreeClusteringProgress";
         
         for (NSString *key in annotationsForTrees.allKeys) {
             
-            NSMutableSet *annotations = annotationsForTrees[key];
+            NSMutableSet *annotations = [annotationsForTrees[key] copy];
             
             if (annotations.count == 0) {
                 continue;
@@ -541,11 +541,10 @@ NSString * const KDTreeClusteringProgress = @"KDTreeClusteringProgress";
                 [mapPointAnnotations addObject:mapPointAnnotation];
             }
             
-            ADMapCluster *rootCluster = [ADMapCluster rootClusterForAnnotations:mapPointAnnotations mapView:self completion:nil];
-            rootCluster.clusterRootTreeIdentifier = key;
+            ADMapCluster *rootCluster = [ADMapCluster rootClusterForAnnotations:mapPointAnnotations mapView:self treeID:key completion:nil];
+            rootCluster.treeID = key;
             [allRootClusters addObject:rootCluster];
         }
-        
         
         
         TSClusterMapView *strongSelf = weakSelf;
@@ -554,7 +553,7 @@ NSString * const KDTreeClusteringProgress = @"KDTreeClusteringProgress";
             strongSelf.rootMapCluster = allRootClusters.firstObject;
             
             if (!strongSelf.rootMapCluster) {
-                strongSelf.rootMapCluster = [ADMapCluster rootClusterForAnnotations:nil mapView:self completion:nil];
+                strongSelf.rootMapCluster = [ADMapCluster rootClusterForAnnotations:nil mapView:self treeID:nil completion:nil];
             }
         }
         else {

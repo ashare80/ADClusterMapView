@@ -13,9 +13,13 @@
 
 BOOL CLLocationCoordinate2DIsApproxEqual(CLLocationCoordinate2D coord1, CLLocationCoordinate2D coord2, float epsilon);
 
+double CLLocationCoordinate2DBearingRadians(CLLocationCoordinate2D coord1, CLLocationCoordinate2D coord2);
+
 CLLocationCoordinate2D CLLocationCoordinate2DOffset(CLLocationCoordinate2D coord, double x, double y);
 
 CLLocationCoordinate2D CLLocationCoordinate2DRoundedLonLat(CLLocationCoordinate2D coord, int decimalPlace);
+
+CLLocationCoordinate2D CLLocationCoordinate2DMidPoint(CLLocationCoordinate2D coord1, CLLocationCoordinate2D coord2);
 
 BOOL MKMapRectSizeIsEqual(MKMapRect rect1, MKMapRect rect2);
 
