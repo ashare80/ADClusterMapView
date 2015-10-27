@@ -46,11 +46,11 @@ typedef void(^KdtreeCompletionBlock)(ADMapCluster *mapCluster);
 
 @property (readonly) NSSet <ADMapCluster *> *clustersWithAnnotations;
 
-@property (strong, nonatomic) NSString *treeID;
+@property (strong, nonatomic) NSString *groupID;
 
 - (id)initWithRootClusters:(NSArray <ADMapCluster *>*)clusters;
 
-- (ADMapCluster *)rootClusterForID:(NSString *)treeID;
+- (ADMapCluster *)rootClusterForID:(NSString *)groupID;
 
 - (BOOL)overlapsClusterOnMap:(ADMapCluster *)cluster annotationViewMapRectSize:(MKMapRect)annotationViewRect;
 
@@ -58,22 +58,22 @@ typedef void(^KdtreeCompletionBlock)(ADMapCluster *mapCluster);
  * @discussion Creates a KD-tree of clusters http://en.wikipedia.org/wiki/K-d_tree
  * @param annotations Set of ADMapPointAnnotation objects
  * @param mapView The ADClusterMapView that will send the delegate callback
- * @param treeID The key associated with the group of annotations
+ * @param groupID The key associated with the group of annotations
  * @param completion A new ADMapCluster object.
  */
-+ (ADMapCluster *)rootClusterForAnnotations:(NSSet <ADMapPointAnnotation *> *)annotations mapView:(TSClusterMapView *)mapView treeID:(NSString *)treeID completion:(KdtreeCompletionBlock)completion ;
++ (ADMapCluster *)rootClusterForAnnotations:(NSSet <ADMapPointAnnotation *> *)annotations mapView:(TSClusterMapView *)mapView groupID:(NSString *)groupID completion:(KdtreeCompletionBlock)completion ;
 
 
 /*!
  * @discussion Creates a KD-tree of clusters http://en.wikipedia.org/wiki/K-d_tree
  * @param annotations Set of ADMapPointAnnotation objects
- * @param treeID The key associated with the group of annotations
+ * @param groupID The key associated with the group of annotations
  * @param gamma Descrimination power
  * @param clusterTitle Title of cluster
  * @param showSubtitle A Boolean to show subtitle from titles of children
  * @param completion A new ADMapCluster object.
  */
-+ (ADMapCluster *)rootClusterForAnnotations:(NSSet <ADMapPointAnnotation *> *)annotations treeID:(NSString *)treeID centerWeight:(double)gamma title:(NSString *)clusterTitle showSubtitle:(BOOL)showSubtitle completion:(KdtreeCompletionBlock)completion ;
++ (ADMapCluster *)rootClusterForAnnotations:(NSSet <ADMapPointAnnotation *> *)annotations groupID:(NSString *)groupID centerWeight:(double)gamma title:(NSString *)clusterTitle showSubtitle:(BOOL)showSubtitle completion:(KdtreeCompletionBlock)completion ;
 
 /*!
  * @discussion Adds a single map point annotation to an existing KD-tree map cluster root

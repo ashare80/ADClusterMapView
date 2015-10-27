@@ -698,7 +698,7 @@
     
     for (ADClusterAnnotation *annotation in annotations) {
         for (ADClusterAnnotation *compareAnnotation in annotations) {
-            if (compareAnnotation == annotation || [compareAnnotation.cluster.treeID isEqualToString:annotation.cluster.treeID]) {
+            if (compareAnnotation == annotation || [compareAnnotation.cluster.groupID isEqualToString:annotation.cluster.groupID]) {
                 continue;
             }
             

@@ -102,10 +102,10 @@ typedef NS_ENUM(NSInteger, ADClusterBufferSize) {
 
 @interface TSClusterMapView : MKMapView <MKMapViewDelegate, UIGestureRecognizerDelegate, TSClusterMapViewDelegate>
 
-- (void)addClusteredAnnotation:(id<MKAnnotation>)annotation toTree:(NSString *)treeID;
-- (void)addClusteredAnnotations:(NSArray <id<MKAnnotation>> *)annotations toTree:(NSString *)treeID;
-- (void)removeAnnotations:(NSArray <id<MKAnnotation>> *)annotations fromTree:(NSString *)treeID;
-- (void)removeAnnotation:(id<MKAnnotation>)annotation fromTree:(NSString *)treeID;
+- (void)addClusteredAnnotation:(id<MKAnnotation>)annotation toGroup:(NSString *)groupID;
+- (void)addClusteredAnnotations:(NSArray <id<MKAnnotation>> *)annotations toGroup:(NSString *)groupID;
+- (void)removeAnnotations:(NSArray <id<MKAnnotation>> *)annotations fromGroup:(NSString *)groupID;
+- (void)removeAnnotation:(id<MKAnnotation>)annotation fromGroup:(NSString *)groupID;
 
 /*!
  * @discussion Adds an annotation to the map and clusters if needed (threadsafe). Only rebuilds entire cluster tree if there are less than 1000 clustered annotations or the annotation coordinate is an outlier from current clustered data set.

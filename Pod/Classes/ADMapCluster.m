@@ -32,11 +32,11 @@ static NSString * const kTSClusterMapViewRootMultiClusterID = @"kTSClusterMapVie
 
 #pragma mark - Init
 
-+ (ADMapCluster *)rootClusterForAnnotations:(NSSet<ADMapPointAnnotation *> *)annotations mapView:(TSClusterMapView *)mapView treeID:(NSString *)treeID completion:(KdtreeCompletionBlock)completion {
++ (ADMapCluster *)rootClusterForAnnotations:(NSSet<ADMapPointAnnotation *> *)annotations mapView:(TSClusterMapView *)mapView groupID:(NSString *)groupID completion:(KdtreeCompletionBlock)completion {
     
     [mapView mapView:mapView willBeginBuildingClusterTreeForMapPoints:annotations];
     
-    return [ADMapCluster rootClusterForAnnotations:annotations treeID:treeID centerWeight:mapView.clusterDiscrimination title:mapView.clusterTitle showSubtitle:mapView.clusterShouldShowSubtitle completion:^(ADMapCluster *mapCluster) {
+    return [ADMapCluster rootClusterForAnnotations:annotations groupID:groupID centerWeight:mapView.clusterDiscrimination title:mapView.clusterTitle showSubtitle:mapView.clusterShouldShowSubtitle completion:^(ADMapCluster *mapCluster) {
         [mapView mapView:mapView didFinishBuildingClusterTreeForMapPoints:annotations];
         
         if (completion) {
@@ -45,7 +45,7 @@ static NSString * const kTSClusterMapViewRootMultiClusterID = @"kTSClusterMapVie
     }];
 }
 
-+ (ADMapCluster *)rootClusterForAnnotations:(NSSet<ADMapPointAnnotation *> *)annotations treeID:(NSString *)treeID centerWeight:(double)gamma title:(NSString *)clusterTitle showSubtitle:(BOOL)showSubtitle completion:(KdtreeCompletionBlock)completion {
++ (ADMapCluster *)rootClusterForAnnotations:(NSSet<ADMapPointAnnotation *> *)annotations groupID:(NSString *)groupID centerWeight:(double)gamma title:(NSString *)clusterTitle showSubtitle:(BOOL)showSubtitle completion:(KdtreeCompletionBlock)completion {
     
     // KDTree
     //NSLog(@"Computing KD-tree for %lu annotations...", (unsigned long)annotations.count);
@@ -69,7 +69,7 @@ static NSString * const kTSClusterMapViewRootMultiClusterID = @"kTSClusterMapVie
     }
     
     
-    ADMapCluster * cluster = [[ADMapCluster alloc] initWithAnnotations:annotations treeID:(NSString *)treeID atDepth:0 inMapRect:boundaries gamma:gamma clusterTitle:clusterTitle showSubtitle:showSubtitle parentCluster:nil rootCluster:nil];
+    ADMapCluster * cluster = [[ADMapCluster alloc] initWithAnnotations:annotations groupID:(NSString *)groupID atDepth:0 inMapRect:boundaries gamma:gamma clusterTitle:clusterTitle showSubtitle:showSubtitle parentCluster:nil rootCluster:nil];
     
     //NSLog(@"Computation done !");
     
@@ -79,7 +79,7 @@ static NSString * const kTSClusterMapViewRootMultiClusterID = @"kTSClusterMapVie
     return cluster;
 }
 
-- (id)initWithAnnotations:(NSSet <ADMapPointAnnotation *> *)annotations treeID:(NSString *)treeID atDepth:(NSInteger)depth inMapRect:(MKMapRect)mapRect gamma:(double)gamma clusterTitle:(NSString *)clusterTitle showSubtitle:(BOOL)showSubtitle parentCluster:(ADMapCluster *)parentCluster rootCluster:(ADMapCluster *)rootCluster {
+- (id)initWithAnnotations:(NSSet <ADMapPointAnnotation *> *)annotations groupID:(NSString *)groupID atDepth:(NSInteger)depth inMapRect:(MKMapRect)mapRect gamma:(double)gamma clusterTitle:(NSString *)clusterTitle showSubtitle:(BOOL)showSubtitle parentCluster:(ADMapCluster *)parentCluster rootCluster:(ADMapCluster *)rootCluster {
     self = [super init];
     if (self) {
         _depth = depth;
@@ -90,7 +90,7 @@ static NSString * const kTSClusterMapViewRootMultiClusterID = @"kTSClusterMapVie
         _parentCluster = parentCluster;
         _clusterCount = annotations.count;
         _progress = 0;
-        _treeID = treeID;
+        _groupID = groupID;
         
         if (depth == 0) {
             rootCluster = self;
@@ -131,10 +131,10 @@ static NSString * const kTSClusterMapViewRootMultiClusterID = @"kTSClusterMapVie
             MKMapRect rightMapRect = [ADMapCluster boundariesForAnnotations:splitAnnotations[1]];
             
             if (splitAnnotations[0]) {
-                _leftChild = [[ADMapCluster alloc] initWithAnnotations:splitAnnotations[0] treeID:(NSString *)treeID atDepth:depth+1 inMapRect:leftMapRect gamma:gamma clusterTitle:clusterTitle showSubtitle:showSubtitle parentCluster:self rootCluster:rootCluster];
+                _leftChild = [[ADMapCluster alloc] initWithAnnotations:splitAnnotations[0] groupID:(NSString *)groupID atDepth:depth+1 inMapRect:leftMapRect gamma:gamma clusterTitle:clusterTitle showSubtitle:showSubtitle parentCluster:self rootCluster:rootCluster];
             }
             
-            _rightChild = [[ADMapCluster alloc] initWithAnnotations:splitAnnotations[1] treeID:(NSString *)treeID atDepth:depth+1 inMapRect:rightMapRect gamma:gamma clusterTitle:clusterTitle showSubtitle:showSubtitle parentCluster:self rootCluster:rootCluster];
+            _rightChild = [[ADMapCluster alloc] initWithAnnotations:splitAnnotations[1] groupID:(NSString *)groupID atDepth:depth+1 inMapRect:rightMapRect gamma:gamma clusterTitle:clusterTitle showSubtitle:showSubtitle parentCluster:self rootCluster:rootCluster];
         }
     }
     return self;
@@ -146,7 +146,7 @@ static NSString * const kTSClusterMapViewRootMultiClusterID = @"kTSClusterMapVie
 - (id)initWithRootClusters:(NSArray <ADMapCluster *>*)clusters {
     self = [super init];
     if (self) {
-        self.treeID = kTSClusterMapViewRootMultiClusterID;
+        self.groupID = kTSClusterMapViewRootMultiClusterID;
         
         _clusterCount = 0;
         
@@ -233,16 +233,16 @@ static NSString * const kTSClusterMapViewRootMultiClusterID = @"kTSClusterMapVie
     return self;
 }
 
-- (ADMapCluster *)rootClusterForID:(NSString *)treeID {
+- (ADMapCluster *)rootClusterForID:(NSString *)groupID {
     
     for (ADMapCluster *cluster in self.children) {
         
-        if ([cluster.treeID isEqualToString:treeID]) {
+        if ([cluster.groupID isEqualToString:groupID]) {
             return cluster;
         }
         
-        if ([cluster.treeID isEqualToString:kTSClusterMapViewRootMultiClusterID]) {
-            ADMapCluster *foundCluster = [cluster rootClusterForID:treeID];
+        if ([cluster.groupID isEqualToString:kTSClusterMapViewRootMultiClusterID]) {
+            ADMapCluster *foundCluster = [cluster rootClusterForID:groupID];
             if (foundCluster) {
                 return foundCluster;
             }
@@ -413,7 +413,7 @@ static NSString * const kTSClusterMapViewRootMultiClusterID = @"kTSClusterMapVie
     
     closestCluster.clusterCount = 0;
     
-    [ADMapCluster rootClusterForAnnotations:annotationsToRecalculate mapView:mapView treeID:self.treeID completion:^(ADMapCluster *mapCluster) {
+    [ADMapCluster rootClusterForAnnotations:annotationsToRecalculate mapView:mapView groupID:self.groupID completion:^(ADMapCluster *mapCluster) {
         if (closestCluster.parentCluster.rightChild == closestCluster) {
             closestCluster.parentCluster.rightChild = mapCluster;
         }
@@ -448,7 +448,7 @@ static NSString * const kTSClusterMapViewRootMultiClusterID = @"kTSClusterMapVie
     
     clusterParent.clusterCount = 0;
     
-    [ADMapCluster rootClusterForAnnotations:annotationsToRecalculate mapView:mapView treeID:self.treeID completion:^(ADMapCluster *mapCluster) {
+    [ADMapCluster rootClusterForAnnotations:annotationsToRecalculate mapView:mapView groupID:self.groupID completion:^(ADMapCluster *mapCluster) {
         
         if (clusterParent.parentCluster.rightChild == clusterParent) {
             clusterParent.parentCluster.rightChild = mapCluster;

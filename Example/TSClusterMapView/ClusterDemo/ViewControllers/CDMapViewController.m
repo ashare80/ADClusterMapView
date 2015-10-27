@@ -172,14 +172,14 @@
     if (_tabBar.selectedItem == _bathroomTabBarItem) {
         NSLog(@"Adding All %@", CDToiletJsonFile);
         
-        [_mapView addClusteredAnnotations:_bathroomAnnotations toTree:CDToiletJsonFile];
+        [_mapView addClusteredAnnotations:_bathroomAnnotations toGroup:CDToiletJsonFile];
         _bathroomAnnotationsAdded = [NSMutableArray arrayWithArray:_bathroomAnnotations];
         _stepper.value = _bathroomAnnotationsAdded.count;
     }
     else if (_tabBar.selectedItem == _streetLightsTabBarItem) {
         NSLog(@"Adding All %@", CDStreetLightJsonFile);
         
-        [_mapView addClusteredAnnotations:_streetLightAnnotations toTree:CDStreetLightJsonFile];
+        [_mapView addClusteredAnnotations:_streetLightAnnotations toGroup:CDStreetLightJsonFile];
         _streetLightAnnotationsAdded = [NSMutableArray arrayWithArray:_streetLightAnnotations];
         _stepper.value = _streetLightAnnotationsAdded.count;
     }
@@ -190,13 +190,13 @@
 - (IBAction)removeAll:(id)sender {
     
     if (_tabBar.selectedItem == _bathroomTabBarItem) {
-        [_mapView removeAnnotations:_bathroomAnnotationsAdded fromTree:CDToiletJsonFile];
+        [_mapView removeAnnotations:_bathroomAnnotationsAdded fromGroup:CDToiletJsonFile];
         [_bathroomAnnotationsAdded removeAllObjects];
         
         NSLog(@"Removing All %@", CDToiletJsonFile);
     }
     else if (_tabBar.selectedItem == _streetLightsTabBarItem) {
-        [_mapView removeAnnotations:_streetLightAnnotationsAdded fromTree:CDStreetLightJsonFile];
+        [_mapView removeAnnotations:_streetLightAnnotationsAdded fromGroup:CDStreetLightJsonFile];
         [_streetLightAnnotationsAdded removeAllObjects];
         
         NSLog(@"Removing All %@", CDStreetLightJsonFile);
@@ -249,7 +249,7 @@
     TSBathroomAnnotation *annotation = [_bathroomAnnotations objectAtIndex:_bathroomAnnotationsAdded.count];
     [_bathroomAnnotationsAdded addObject:annotation];
     
-    [_mapView addClusteredAnnotation:annotation toTree:CDToiletJsonFile];
+    [_mapView addClusteredAnnotation:annotation toGroup:CDToiletJsonFile];
 }
 
 - (void)addNewStreetLight {
@@ -263,7 +263,7 @@
     TSStreetLightAnnotation *annotation = [_streetLightAnnotations objectAtIndex:_streetLightAnnotationsAdded.count];
     [_streetLightAnnotationsAdded addObject:annotation];
     
-    [_mapView addClusteredAnnotation:annotation toTree:CDStreetLightJsonFile];
+    [_mapView addClusteredAnnotation:annotation toGroup:CDStreetLightJsonFile];
 }
 
 - (void)removeLastBathroom {
@@ -272,7 +272,7 @@
     
     TSBathroomAnnotation *annotation = [_bathroomAnnotationsAdded lastObject];
     [_bathroomAnnotationsAdded removeObject:annotation];
-    [_mapView removeAnnotation:annotation fromTree:CDToiletJsonFile];
+    [_mapView removeAnnotation:annotation fromGroup:CDToiletJsonFile];
 }
 
 - (void)removeLastStreetLight {
@@ -281,7 +281,7 @@
     
     TSStreetLightAnnotation *annotation = [_streetLightAnnotationsAdded lastObject];
     [_streetLightAnnotationsAdded removeObject:annotation];
-    [_mapView removeAnnotation:annotation fromTree:CDStreetLightJsonFile];
+    [_mapView removeAnnotation:annotation fromGroup:CDStreetLightJsonFile];
 }
 
 - (IBAction)segmentedControlValueChanged:(id)sender {

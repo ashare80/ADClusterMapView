@@ -24,11 +24,11 @@ blue:((float)(rgbValue & 0xFF))/255.0 alpha:1.0]
         
         self.label = [[UILabel alloc] initWithFrame:self.frame];
         
-        if ([annotation.cluster.treeID isEqualToString:CDStreetLightJsonFile]) {
+        if ([annotation.cluster.groupID isEqualToString:CDStreetLightJsonFile]) {
             self.image = [UIImage imageNamed:@"ClusterAnnotationYellow"];
             self.label.textColor = UIColorFromRGB(0xf6d262);
         }
-        else if ([annotation.cluster.treeID isEqualToString:CDToiletJsonFile]) {
+        else if ([annotation.cluster.groupID isEqualToString:CDToiletJsonFile]) {
             self.image = [UIImage imageNamed:@"ClusterAnnotationGreen"];
             self.label.textColor = UIColorFromRGB(0x6fc99d);
         }
@@ -60,11 +60,11 @@ blue:((float)(rgbValue & 0xFF))/255.0 alpha:1.0]
     NSUInteger count = clusterAnnotation.clusterCount;
     self.label.text = [self numberLabelText:count];
     
-    if ([clusterAnnotation.cluster.treeID isEqualToString:CDStreetLightJsonFile]) {
+    if ([clusterAnnotation.cluster.groupID isEqualToString:CDStreetLightJsonFile]) {
         self.image = [UIImage imageNamed:@"ClusterAnnotationYellow"];
         self.label.textColor = UIColorFromRGB(0xf6d262);
     }
-    else if ([clusterAnnotation.cluster.treeID isEqualToString:CDToiletJsonFile]) {
+    else if ([clusterAnnotation.cluster.groupID isEqualToString:CDToiletJsonFile]) {
         self.image = [UIImage imageNamed:@"ClusterAnnotationGreen"];
         self.label.textColor = UIColorFromRGB(0x6fc99d);
     }
