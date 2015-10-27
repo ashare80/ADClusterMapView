@@ -149,7 +149,6 @@ NSString * const KDTreeClusteringProgress = @"KDTreeClusteringProgress";
 
 - (void)needsRefresh {
     [self createKDTreesAndCluster:_annotationsByTreeID];
-//    [self createKDTreeAndCluster:self.clusterableAnnotationsAdded];
 }
 
 #pragma mark - Add/Remove Annotations
