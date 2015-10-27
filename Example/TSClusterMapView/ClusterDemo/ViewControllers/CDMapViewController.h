@@ -9,6 +9,12 @@
 #import <UIKit/UIKit.h>
 #import "TSClusterMapView.h"
 
+static NSString * const CDStreetLightJsonFile = @"CDStreetlights";
+static NSString * const kStreetLightAnnotationImage = @"StreetLightAnnotationYellow";
+
+static NSString * const CDToiletJsonFile = @"CDToilets";
+static NSString * const kBathroomAnnotationImage = @"BathroomAnnotationGreen";
+
 @interface CDMapViewController : UIViewController <TSClusterMapViewDelegate, UITabBarDelegate>
 
 @property (strong, nonatomic) IBOutlet TSClusterMapView * mapView;

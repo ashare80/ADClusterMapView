@@ -12,11 +12,7 @@
 #import "TSStreetLightAnnotation.h"
 #import "TSDemoClusteredAnnotationView.h"
 
-static NSString * const CDStreetLightJsonFile = @"CDStreetlights";
-static NSString * const kStreetLightAnnotationImage = @"StreetLightAnnotation";
 
-static NSString * const CDToiletJsonFile = @"CDToilets";
-static NSString * const kBathroomAnnotationImage = @"BathroomAnnotation";
 
 @interface CDMapViewController ()
 
