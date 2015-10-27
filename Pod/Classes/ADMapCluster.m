@@ -147,24 +147,30 @@ static NSString * const kTSClusterMapViewRootMultiClusterID = @"kTSClusterMapVie
     self = [super init];
     if (self) {
         self.treeID = kTSClusterMapViewRootMultiClusterID;
-#warning handle 2 trees
-        ADMapCluster *cluster1 = clusters.firstObject;
-        ADMapCluster *cluster2 = clusters.lastObject;
         
-        cluster1.parentCluster = self;
-        cluster2.parentCluster = self;
+        _clusterCount = 0;
+        
+        for (ADMapCluster *cluster in clusters) {
+            cluster.parentCluster = self;
+            _clusterCount += cluster.clusterCount;
+            
+            if (MKMapRectIsEmpty(_mapRect)) {
+                _mapRect = cluster.mapRect;
+                continue;
+            }
+            _mapRect = MKMapRectUnion(_mapRect, cluster.mapRect);
+        }
         
         _depth = 0;
-        _mapRect = MKMapRectUnion(cluster1.mapRect, cluster2.mapRect);
-        _clusterTitle = cluster1.title;
-        _showSubtitle = cluster1.showSubtitle;
-        _gamma = cluster1.gamma;
+        _clusterTitle = clusters.firstObject.title;
+        _showSubtitle = clusters.firstObject.showSubtitle;
+        _gamma = clusters.firstObject.gamma;
         _parentCluster = nil;
-        _clusterCount = cluster1.clusterCount + cluster2.clusterCount;
         _progress = 0;
         
         self.annotation = nil;
         
+        NSMutableDictionary *mutableDict = [[NSMutableDictionary alloc] init];
         NSMutableSet *annotations = [[NSMutableSet alloc] initWithCapacity:clusters.count];
         
         for (ADMapCluster *cluster in clusters) {
@@ -172,14 +178,57 @@ static NSString * const kTSClusterMapViewRootMultiClusterID = @"kTSClusterMapVie
             tempAnnotation.coordinate = cluster.clusterCoordinate;
             ADMapPointAnnotation *mapPoint = [[ADMapPointAnnotation alloc] initWithAnnotation:tempAnnotation];
             [annotations addObject:mapPoint];
+            
+            [mutableDict setObject:cluster forKey:mapPoint];
         }
         
             
         MKMapPoint centerMapPoint = [self meanCoordinateForAnnotations:annotations gamma:_gamma];
         _clusterCoordinate = MKCoordinateForMapPoint(centerMapPoint);
         
-        _leftChild = cluster1;
-        _rightChild = cluster2;
+        NSArray *splitAnnotations = [self splitAnnotations:annotations centerPoint:centerMapPoint];
+        NSArray *left = splitAnnotations.firstObject;
+        NSArray *right = splitAnnotations.lastObject;
+        
+        NSMutableArray *leftChildren = [[NSMutableArray alloc] init];
+        for (ADMapPointAnnotation *mapPoint in left) {
+            ADMapCluster *cluster = [mutableDict objectForKey:mapPoint];
+            if (cluster) {
+                [leftChildren addObject:cluster];
+            }
+            else {
+                NSLog(@"Lost cluster");
+            }
+        }
+        
+        NSMutableArray *rightChildren = [[NSMutableArray alloc] init];
+        for (ADMapPointAnnotation *mapPoint in right) {
+            ADMapCluster *cluster = [mutableDict objectForKey:mapPoint];
+            if (cluster) {
+                [rightChildren addObject:cluster];
+            }
+            else {
+                NSLog(@"Lost cluster");
+            }
+        }
+        
+        if (leftChildren.count) {
+            if (leftChildren.count == 1) {
+                _leftChild = leftChildren.firstObject;
+            }
+            else {
+                _leftChild = [[ADMapCluster alloc] initWithRootClusters:leftChildren];
+            }
+        }
+        
+        if (rightChildren.count) {
+            if (rightChildren.count == 1) {
+                _rightChild = rightChildren.firstObject;
+            }
+            else {
+                _rightChild = [[ADMapCluster alloc] initWithRootClusters:rightChildren];
+            }
+        }
     }
     return self;
 }

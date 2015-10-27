@@ -19,4 +19,26 @@
     return self;
 }
 
+- (id)copyWithZone:(NSZone *)zone {
+    
+    return [[[self class] alloc] initWithAnnotation:_annotation];
+}
+
+- (BOOL)isEqual:(ADMapPointAnnotation *)other
+{
+    if (other == self) {
+        return YES;
+    } else {
+        if ([other isKindOfClass:[self class]]) {
+            return [self.annotation isEqual:other.annotation];
+        }
+        return NO;
+    }
+}
+
+- (NSUInteger)hash
+{
+    return [@(self.mapPoint.x) hash] ^ [@(self.mapPoint.y) hash] ^ [self.annotation hash];
+}
+
 @end
