@@ -78,7 +78,7 @@
 
 #pragma mark - ADClusterMapView Delegate
 
-- (MKAnnotationView *)mapView:(TSClusterMapView *)mapView viewForClusterAnnotation:(id<MKAnnotation>)annotation {
+- (MKAnnotationView *)mapView:(TSClusterMapView *)mapView viewForClusterAnnotation:(ADClusterAnnotation *)annotation {
     
     TSDemoClusteredAnnotationView * view = (TSDemoClusteredAnnotationView *)[mapView dequeueReusableAnnotationViewWithIdentifier:NSStringFromClass([TSDemoClusteredAnnotationView class])];
     if (!view) {

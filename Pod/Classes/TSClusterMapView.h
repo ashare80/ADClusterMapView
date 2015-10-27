@@ -26,7 +26,7 @@ extern NSString * const KDTreeClusteringProgress;
  * @param annotation The object representing the annotation that is about to be displayed.
  * @return The annotation view to display for the specified annotation or nil if you want to display a standard annotation view.
  */
-- (MKAnnotationView *)mapView:(TSClusterMapView *)mapView viewForClusterAnnotation:(id <MKAnnotation>)annotation;
+- (MKAnnotationView *)mapView:(TSClusterMapView *)mapView viewForClusterAnnotation:(ADClusterAnnotation *)annotation;
 
 /*!
  * @discussion MapView will begin creating Kd-tree from new annotations. Use this delegate to alert the user of a refresh for large data sets with long build times.
