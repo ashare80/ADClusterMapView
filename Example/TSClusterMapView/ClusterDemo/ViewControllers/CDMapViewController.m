@@ -152,6 +152,11 @@
 
 - (void)tabBar:(UITabBar *)tabBar didSelectItem:(UITabBarItem *)item {
     
+    [self resetsStepperValues];
+}
+
+- (void)resetsStepperValues {
+    
     if (_tabBar.selectedItem == _bathroomTabBarItem) {
         _stepper.value = _bathroomAnnotationsAdded.count;
         _stepper.minimumValue = 0;
@@ -174,17 +179,17 @@
         
         [_mapView addClusteredAnnotations:_bathroomAnnotations toGroup:CDToiletJsonFile];
         _bathroomAnnotationsAdded = [NSMutableArray arrayWithArray:_bathroomAnnotations];
-        _stepper.value = _bathroomAnnotationsAdded.count;
     }
     else if (_tabBar.selectedItem == _streetLightsTabBarItem) {
         NSLog(@"Adding All %@", CDStreetLightJsonFile);
         
         [_mapView addClusteredAnnotations:_streetLightAnnotations toGroup:CDStreetLightJsonFile];
         _streetLightAnnotationsAdded = [NSMutableArray arrayWithArray:_streetLightAnnotations];
-        _stepper.value = _streetLightAnnotationsAdded.count;
     }
     
     [self refreshBadges];
+    
+    [self resetsStepperValues];
 }
 
 - (IBAction)removeAll:(id)sender {

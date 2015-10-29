@@ -62,12 +62,12 @@
 
 - (CLLocationCoordinate2D)offscreenCoordinate {
     
-    CLLocationCoordinate2D coordinate = CLLocationCoordinate2DMake(MAXFLOAT, MAXFLOAT);
+    CLLocationCoordinate2D coordinate;// = CLLocationCoordinate2DMake(MAXFLOAT, MAXFLOAT);
     
-    if (!SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(@"8.0")) {
+//    if (!SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(@"8.0")) {
         coordinate = CLLocationCoordinate2DMake(85.0, 179.0);
         // this coordinate puts the annotation on the top right corner of the map. We use this instead of kCLLocationCoordinate2DInvalid so that we don't mess with MapKit's KVO weird behaviour that removes from the map the annotations whose coordinate was set to kCLLocationCoordinate2DInvalid.
-    }
+//    }
     
     return coordinate;
 }
@@ -77,7 +77,7 @@
     return (self.coordinate.latitude == offscreen.latitude && self.coordinate.longitude == offscreen.longitude);
 }
 
-- (NSArray <id<MKAnnotation>> *)originalAnnotations {
+- (NSSet <id<MKAnnotation>> *)originalAnnotations {
     NSAssert(self.cluster != nil, @"This annotation should have a cluster assigned!");
     return self.cluster.originalAnnotations;
 }

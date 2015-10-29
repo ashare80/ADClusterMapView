@@ -26,9 +26,9 @@ typedef void(^KdtreeCompletionBlock)(ADMapCluster *mapCluster);
 
 @property (nonatomic, readonly) NSInteger depth;
 
-@property (readonly) NSMutableArray <id<MKAnnotation>> *originalAnnotations;
+@property (readonly) NSSet <id<MKAnnotation>> *originalAnnotations;
 
-@property (readonly) NSMutableArray <ADMapPointAnnotation *> *originalMapPointAnnotations;
+@property (readonly, strong) NSSet <ADMapPointAnnotation *> *originalMapPointAnnotations;
 
 @property (readonly) NSString *title;
 
@@ -48,9 +48,13 @@ typedef void(^KdtreeCompletionBlock)(ADMapCluster *mapCluster);
 
 @property (strong, nonatomic) NSString *groupID;
 
+@property (strong, nonatomic) NSArray <ADMapCluster *>*rootClusters;
+
 - (id)initWithRootClusters:(NSArray <ADMapCluster *>*)clusters;
 
 - (ADMapCluster *)rootClusterForID:(NSString *)groupID;
+
+- (instancetype)rebuildWithAnnotations:(NSSet<ADMapPointAnnotation *> *)annotations mapView:(TSClusterMapView *)mapView completion:(KdtreeCompletionBlock)completion;
 
 - (BOOL)overlapsClusterOnMap:(ADMapCluster *)cluster annotationViewMapRectSize:(MKMapRect)annotationViewRect;
 
