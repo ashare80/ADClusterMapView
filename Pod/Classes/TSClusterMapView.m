@@ -670,13 +670,9 @@ NSString * const KDTreeClusteringProgress = @"KDTreeClusteringProgress";
         return;
     }
     
-    NSDictionary *groupedRoundedLatLonAnnotations = [TSClusterOperation groupAnnotationsByLocationValue:clusterAnnotation.cluster.originalAnnotations];
-    
-    if (groupedRoundedLatLonAnnotations.allKeys.count == 1) {
-        if ([_clusterDelegate respondsToSelector:@selector(mapView:shouldForceSplitClusterAnnotation:)]) {
-            if (![_clusterDelegate mapView:self shouldForceSplitClusterAnnotation:clusterAnnotation]) {
-                return;
-            }
+    if ([_clusterDelegate respondsToSelector:@selector(mapView:shouldForceSplitClusterAnnotation:)]) {
+        if (![_clusterDelegate mapView:self shouldForceSplitClusterAnnotation:clusterAnnotation]) {
+            return;
         }
     }
     
