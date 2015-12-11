@@ -953,7 +953,7 @@ NSString * const KDTreeClusteringProgress = @"KDTreeClusteringProgress";
                     
                     MKCoordinateRegion region = MKCoordinateRegionForMapRect(zoomTo);
                     
-                    if (zoomTo.size.width < 3000) {
+                    if (zoomTo.size.width < 3000 || zoomTo.size.height < 3000) {
                         
                         float ratio = self.camera.altitude/self.visibleMapRect.size.width;
                         
