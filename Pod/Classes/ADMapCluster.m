@@ -14,6 +14,8 @@
 
 #define ADMapClusterDiscriminationPrecision 1E-4
 
+static NSString * const kTSClusterMapViewRootMultiClusterID = @"kTSClusterMapViewRootMultiClusterID-Private";
+
 @interface ADMapCluster ()
 
 @property (nonatomic, strong) ADMapCluster *leftChild;
@@ -30,18 +32,38 @@
 
 #pragma mark - Init
 
-+ (void)rootClusterForAnnotations:(NSSet <ADMapPointAnnotation *> *)annotations mapView:(TSClusterMapView *)mapView completion:(KdtreeCompletionBlock)completion {
+- (instancetype)rebuildWithAnnotations:(NSSet<ADMapPointAnnotation *> *)annotations mapView:(TSClusterMapView *)mapView completion:(KdtreeCompletionBlock)completion {
     
-    [mapView mapView:mapView willBeginBuildingClusterTreeForMapPoints:annotations];
-    
-    [ADMapCluster rootClusterForAnnotations:annotations centerWeight:mapView.clusterDiscrimination title:mapView.clusterTitle showSubtitle:mapView.clusterShouldShowSubtitle completion:^(ADMapCluster *mapCluster) {
-        [mapView mapView:mapView didFinishBuildingClusterTreeForMapPoints:annotations];
+    return [ADMapCluster rootClusterForAnnotations:annotations mapView:mapView groupID:self.groupID completion:^(ADMapCluster *mapCluster) {
         
-        completion(mapCluster);
+        mapCluster.parentCluster = self.parentCluster;
+        
+        if (self.parentCluster.leftChild == self) {
+            self.parentCluster.leftChild = mapCluster;
+        }
+        else {
+            self.parentCluster.rightChild = mapCluster;
+        }
+        if (completion) {
+            completion(mapCluster);
+        }
     }];
 }
 
-+ (void)rootClusterForAnnotations:(NSSet <ADMapPointAnnotation *> *)annotations centerWeight:(double)gamma title:(NSString *)clusterTitle showSubtitle:(BOOL)showSubtitle completion:(KdtreeCompletionBlock)completion {
++ (instancetype)rootClusterForAnnotations:(NSSet<ADMapPointAnnotation *> *)annotations mapView:(TSClusterMapView *)mapView groupID:(NSString *)groupID completion:(KdtreeCompletionBlock)completion {
+    
+    [mapView mapView:mapView willBeginBuildingClusterTreeForMapPoints:annotations];
+    
+    return [ADMapCluster rootClusterForAnnotations:annotations groupID:groupID centerWeight:mapView.clusterDiscrimination title:mapView.clusterTitle showSubtitle:mapView.clusterShouldShowSubtitle completion:^(ADMapCluster *mapCluster) {
+        [mapView mapView:mapView didFinishBuildingClusterTreeForMapPoints:annotations];
+        
+        if (completion) {
+            completion(mapCluster);
+        }
+    }];
+}
+
++ (instancetype)rootClusterForAnnotations:(NSSet<ADMapPointAnnotation *> *)annotations groupID:(NSString *)groupID centerWeight:(double)gamma title:(NSString *)clusterTitle showSubtitle:(BOOL)showSubtitle completion:(KdtreeCompletionBlock)completion {
     
     // KDTree
     //NSLog(@"Computing KD-tree for %lu annotations...", (unsigned long)annotations.count);
@@ -65,16 +87,20 @@
     }
     
     
-    ADMapCluster * cluster = [[ADMapCluster alloc] initWithAnnotations:annotations atDepth:0 inMapRect:boundaries gamma:gamma clusterTitle:clusterTitle showSubtitle:showSubtitle parentCluster:nil rootCluster:nil];
+    ADMapCluster * cluster = [[ADMapCluster alloc] initWithAnnotations:annotations groupID:(NSString *)groupID atDepth:0 inMapRect:boundaries gamma:gamma clusterTitle:clusterTitle showSubtitle:showSubtitle parentCluster:nil rootCluster:nil];
     
     //NSLog(@"Computation done !");
     
-    completion(cluster);
+    if (completion) {
+        completion(cluster);
+    }
+    return cluster;
 }
 
-- (id)initWithAnnotations:(NSSet <ADMapPointAnnotation *> *)annotations atDepth:(NSInteger)depth inMapRect:(MKMapRect)mapRect gamma:(double)gamma clusterTitle:(NSString *)clusterTitle showSubtitle:(BOOL)showSubtitle parentCluster:(ADMapCluster *)parentCluster rootCluster:(ADMapCluster *)rootCluster {
+- (id)initWithAnnotations:(NSSet <ADMapPointAnnotation *> *)annotations groupID:(NSString *)groupID atDepth:(NSInteger)depth inMapRect:(MKMapRect)mapRect gamma:(double)gamma clusterTitle:(NSString *)clusterTitle showSubtitle:(BOOL)showSubtitle parentCluster:(ADMapCluster *)parentCluster rootCluster:(ADMapCluster *)rootCluster {
     self = [super init];
     if (self) {
+        _originalMapPointAnnotations = [annotations copy];
         _depth = depth;
         _mapRect = mapRect;
         _clusterTitle = clusterTitle;
@@ -83,6 +109,7 @@
         _parentCluster = parentCluster;
         _clusterCount = annotations.count;
         _progress = 0;
+        _groupID = groupID;
         
         if (depth == 0) {
             rootCluster = self;
@@ -123,13 +150,130 @@
             MKMapRect rightMapRect = [ADMapCluster boundariesForAnnotations:splitAnnotations[1]];
             
             if (splitAnnotations[0]) {
-                _leftChild = [[ADMapCluster alloc] initWithAnnotations:splitAnnotations[0] atDepth:depth+1 inMapRect:leftMapRect gamma:gamma clusterTitle:clusterTitle showSubtitle:showSubtitle parentCluster:self rootCluster:rootCluster];
+                _leftChild = [[ADMapCluster alloc] initWithAnnotations:splitAnnotations[0] groupID:(NSString *)groupID atDepth:depth+1 inMapRect:leftMapRect gamma:gamma clusterTitle:clusterTitle showSubtitle:showSubtitle parentCluster:self rootCluster:rootCluster];
             }
             
-            _rightChild = [[ADMapCluster alloc] initWithAnnotations:splitAnnotations[1] atDepth:depth+1 inMapRect:rightMapRect gamma:gamma clusterTitle:clusterTitle showSubtitle:showSubtitle parentCluster:self rootCluster:rootCluster];
+            _rightChild = [[ADMapCluster alloc] initWithAnnotations:splitAnnotations[1] groupID:(NSString *)groupID atDepth:depth+1 inMapRect:rightMapRect gamma:gamma clusterTitle:clusterTitle showSubtitle:showSubtitle parentCluster:self rootCluster:rootCluster];
         }
     }
     return self;
+}
+
+
+#pragma mark - Multi Tree
+
+- (id)initWithRootClusters:(NSArray <ADMapCluster *>*)clusters {
+    self = [super init];
+    if (self) {
+        self.groupID = kTSClusterMapViewRootMultiClusterID;
+        self.rootClusters = clusters;
+        
+        _clusterCount = 0;
+        
+        for (ADMapCluster *cluster in clusters) {
+            cluster.parentCluster = self;
+            _clusterCount += cluster.clusterCount;
+            
+            if (MKMapRectIsEmpty(_mapRect)) {
+                _mapRect = cluster.mapRect;
+                continue;
+            }
+            _mapRect = MKMapRectUnion(_mapRect, cluster.mapRect);
+        }
+        
+        _depth = 0;
+        _clusterTitle = clusters.firstObject.title;
+        _showSubtitle = clusters.firstObject.showSubtitle;
+        _gamma = clusters.firstObject.gamma;
+        _progress = 0;
+        
+        self.annotation = nil;
+        
+        NSMutableDictionary *mutableDict = [[NSMutableDictionary alloc] init];
+        NSMutableSet *annotations = [[NSMutableSet alloc] initWithCapacity:clusters.count];
+        
+        for (ADMapCluster *cluster in clusters) {
+            cluster.parentCluster = self;
+            ADClusterAnnotation *tempAnnotation = [[ADClusterAnnotation alloc] init];
+            tempAnnotation.coordinate = cluster.clusterCoordinate;
+            ADMapPointAnnotation *mapPoint = [[ADMapPointAnnotation alloc] initWithAnnotation:tempAnnotation];
+            [annotations addObject:mapPoint];
+            
+            [mutableDict setObject:cluster forKey:mapPoint];
+        }
+        
+            
+        MKMapPoint centerMapPoint = [self meanCoordinateForAnnotations:annotations gamma:_gamma];
+        _clusterCoordinate = MKCoordinateForMapPoint(centerMapPoint);
+        
+        NSArray *splitAnnotations = [self splitAnnotations:annotations centerPoint:centerMapPoint];
+        NSArray *left = splitAnnotations.firstObject;
+        NSArray *right = splitAnnotations.lastObject;
+        
+        NSMutableArray *leftChildren = [[NSMutableArray alloc] init];
+        for (ADMapPointAnnotation *mapPoint in left) {
+            ADMapCluster *cluster = [mutableDict objectForKey:mapPoint];
+            if (cluster) {
+                [leftChildren addObject:cluster];
+            }
+            else {
+                NSLog(@"Lost cluster");
+            }
+        }
+        
+        NSMutableArray *rightChildren = [[NSMutableArray alloc] init];
+        for (ADMapPointAnnotation *mapPoint in right) {
+            ADMapCluster *cluster = [mutableDict objectForKey:mapPoint];
+            if (cluster) {
+                [rightChildren addObject:cluster];
+            }
+            else {
+                NSLog(@"Lost cluster");
+            }
+        }
+        
+        if (leftChildren.count) {
+            if (leftChildren.count == 1) {
+                _leftChild = leftChildren.firstObject;
+            }
+            else {
+                _leftChild = [[ADMapCluster alloc] initWithRootClusters:leftChildren];
+            }
+        }
+        
+        if (rightChildren.count) {
+            if (rightChildren.count == 1) {
+                _rightChild = rightChildren.firstObject;
+            }
+            else {
+                _rightChild = [[ADMapCluster alloc] initWithRootClusters:rightChildren];
+            }
+        }
+    }
+    return self;
+}
+
+- (ADMapCluster *)rootClusterForID:(NSString *)groupID {
+    
+    if ([self.groupID isEqualToString:groupID]) {
+        return self;
+    }
+    
+    for (ADMapCluster *cluster in self.children) {
+        
+        if ([cluster.groupID isEqualToString:groupID]) {
+            return cluster;
+        }
+        
+        if ([cluster.groupID isEqualToString:kTSClusterMapViewRootMultiClusterID]) {
+            ADMapCluster *foundCluster = [cluster rootClusterForID:groupID];
+            if (foundCluster) {
+                return foundCluster;
+            }
+        }
+    }
+    
+    return nil;
 }
 
 #pragma mark Tree Mapping
@@ -288,12 +432,12 @@
         }
     }
     
-    NSMutableSet *annotationsToRecalculate = [[NSMutableSet alloc] initWithArray:closestCluster.originalMapPointAnnotations];
+    NSMutableSet *annotationsToRecalculate = [closestCluster.originalMapPointAnnotations mutableCopy];//[[NSMutableSet alloc] initWithArray:closestCluster.originalMapPointAnnotations];
     [annotationsToRecalculate addObject:mapPointAnnotation];
     
     closestCluster.clusterCount = 0;
     
-    [ADMapCluster rootClusterForAnnotations:annotationsToRecalculate mapView:mapView completion:^(ADMapCluster *mapCluster) {
+    [ADMapCluster rootClusterForAnnotations:annotationsToRecalculate mapView:mapView groupID:self.groupID completion:^(ADMapCluster *mapCluster) {
         if (closestCluster.parentCluster.rightChild == closestCluster) {
             closestCluster.parentCluster.rightChild = mapCluster;
         }
@@ -323,12 +467,12 @@
     
     //Go up two cluster to ensure a more complete result
     ADMapCluster *clusterParent = clusterToRemove.parentCluster.parentCluster;
-    NSMutableSet *annotationsToRecalculate = [[NSMutableSet alloc] initWithArray:clusterParent.originalMapPointAnnotations];
+    NSMutableSet *annotationsToRecalculate = [clusterParent.originalMapPointAnnotations mutableCopy];
     [annotationsToRecalculate removeObject:clusterToRemove.annotation];
     
     clusterParent.clusterCount = 0;
     
-    [ADMapCluster rootClusterForAnnotations:annotationsToRecalculate mapView:mapView completion:^(ADMapCluster *mapCluster) {
+    [ADMapCluster rootClusterForAnnotations:annotationsToRecalculate mapView:mapView groupID:self.groupID completion:^(ADMapCluster *mapCluster) {
         
         if (clusterParent.parentCluster.rightChild == clusterParent) {
             clusterParent.parentCluster.rightChild = mapCluster;
@@ -375,18 +519,15 @@
     return nil;
 }
 
-- (NSMutableArray <id<MKAnnotation>> *)originalAnnotations {
-    NSMutableArray * originalAnnotations = [[NSMutableArray alloc] initWithCapacity:1];
-    if (self.annotation) {
-        [originalAnnotations addObject:self.annotation.annotation];
-    } else {
-        if (_leftChild) {
-            [originalAnnotations addObjectsFromArray:_leftChild.originalAnnotations];
-        }
-        if (_rightChild) {
-            [originalAnnotations addObjectsFromArray:_rightChild.originalAnnotations];
-        }
+- (NSSet <id<MKAnnotation>> *)originalAnnotations {
+    
+    NSSet *originalMapPoints = self.originalMapPointAnnotations;
+    NSMutableSet * originalAnnotations = [[NSMutableSet alloc] initWithCapacity:originalMapPoints.count];
+    
+    for (ADMapPointAnnotation *mapPointAnn in originalMapPoints) {
+        [originalAnnotations addObject:mapPointAnn.annotation];
     }
+    
     return originalAnnotations;
 }
 
@@ -420,21 +561,21 @@
 }
 
 
-- (NSMutableArray <ADMapPointAnnotation *> *)originalMapPointAnnotations {
-    NSMutableArray * originalAnnotations = [[NSMutableArray alloc] initWithCapacity:1];
-    
-    if (self.annotation) {
-        [originalAnnotations addObject:self.annotation];
-    }
-    
-    if (_leftChild) {
-        [originalAnnotations addObjectsFromArray:_leftChild.originalMapPointAnnotations];
-    }
-    if (_rightChild) {
-        [originalAnnotations addObjectsFromArray:_rightChild.originalMapPointAnnotations];
-    }
-    return originalAnnotations;
-}
+//- (NSSet <ADMapPointAnnotation *> *)originalMapPointAnnotations {
+//    NSMutableSet * originalAnnotations = [[NSMutableSet alloc] initWithCapacity:1];
+//    
+//    if (self.annotation) {
+//        [originalAnnotations addObject:self.annotation];
+//    }
+//    
+//    if (_leftChild) {
+//        [originalAnnotations unionSet:_leftChild.originalMapPointAnnotations];
+//    }
+//    if (_rightChild) {
+//        [originalAnnotations unionSet:_rightChild.originalMapPointAnnotations];
+//    }
+//    return originalAnnotations;
+//}
 
 - (NSMutableSet <ADMapCluster *> *)clustersWithAnnotations {
     
@@ -508,7 +649,7 @@
             
             for (ADMapCluster * child in children) {
                 if (!overlap && !MKMapRectIsEmpty(annotationSizeRect) && children.count == 2) {
-                    if ([child overlapsClusterOnMap:[children lastObject] annotationViewMapRectSize:annotationSizeRect]) {
+                    if (child.depth != 0 && [child overlapsClusterOnMap:[children lastObject] annotationViewMapRectSize:annotationSizeRect]) {
                         [clusters addObject:cluster];
                         break;
                     }
@@ -638,8 +779,16 @@
 #pragma mark Tree Relations
 
 - (BOOL)isAncestorOf:(ADMapCluster *)mapCluster {
-    return _depth < mapCluster.depth && (_leftChild == mapCluster || _rightChild == mapCluster || [_leftChild isAncestorOf:mapCluster] || [_rightChild isAncestorOf:mapCluster]);
+    
+    BOOL sameGroup = [self.groupID isEqualToString:kTSClusterMapViewRootMultiClusterID] || [mapCluster.groupID isEqualToString:self.groupID];
+    
+    if (!sameGroup) {
+        return NO;
+    }
+    
+    return sameGroup && _depth < mapCluster.depth && (_leftChild == mapCluster || _rightChild == mapCluster || [_leftChild isAncestorOf:mapCluster] || [_rightChild isAncestorOf:mapCluster]);
 }
+
 
 - (BOOL)isRootClusterForAnnotation:(id<MKAnnotation>)annotation {
     return _annotation.annotation == annotation || [_leftChild isRootClusterForAnnotation:annotation] || [_rightChild isRootClusterForAnnotation:annotation];

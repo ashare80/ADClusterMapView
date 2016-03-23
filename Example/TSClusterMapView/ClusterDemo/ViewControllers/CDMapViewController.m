@@ -12,11 +12,7 @@
 #import "TSStreetLightAnnotation.h"
 #import "TSDemoClusteredAnnotationView.h"
 
-static NSString * const CDStreetLightJsonFile = @"CDStreetlights";
-static NSString * const kStreetLightAnnotationImage = @"StreetLightAnnotation";
 
-static NSString * const CDToiletJsonFile = @"CDToilets";
-static NSString * const kBathroomAnnotationImage = @"BathroomAnnotation";
 
 @interface CDMapViewController ()
 
@@ -82,7 +78,7 @@ static NSString * const kBathroomAnnotationImage = @"BathroomAnnotation";
 
 #pragma mark - ADClusterMapView Delegate
 
-- (MKAnnotationView *)mapView:(TSClusterMapView *)mapView viewForClusterAnnotation:(id<MKAnnotation>)annotation {
+- (MKAnnotationView *)mapView:(TSClusterMapView *)mapView viewForClusterAnnotation:(ADClusterAnnotation *)annotation {
     
     TSDemoClusteredAnnotationView * view = (TSDemoClusteredAnnotationView *)[mapView dequeueReusableAnnotationViewWithIdentifier:NSStringFromClass([TSDemoClusteredAnnotationView class])];
     if (!view) {
@@ -156,6 +152,11 @@ static NSString * const kBathroomAnnotationImage = @"BathroomAnnotation";
 
 - (void)tabBar:(UITabBar *)tabBar didSelectItem:(UITabBarItem *)item {
     
+    [self resetsStepperValues];
+}
+
+- (void)resetsStepperValues {
+    
     if (_tabBar.selectedItem == _bathroomTabBarItem) {
         _stepper.value = _bathroomAnnotationsAdded.count;
         _stepper.minimumValue = 0;
@@ -176,31 +177,31 @@ static NSString * const kBathroomAnnotationImage = @"BathroomAnnotation";
     if (_tabBar.selectedItem == _bathroomTabBarItem) {
         NSLog(@"Adding All %@", CDToiletJsonFile);
         
-        [_mapView addClusteredAnnotations:_bathroomAnnotations];
+        [_mapView addClusteredAnnotations:_bathroomAnnotations toGroup:CDToiletJsonFile];
         _bathroomAnnotationsAdded = [NSMutableArray arrayWithArray:_bathroomAnnotations];
-        _stepper.value = _bathroomAnnotationsAdded.count;
     }
     else if (_tabBar.selectedItem == _streetLightsTabBarItem) {
         NSLog(@"Adding All %@", CDStreetLightJsonFile);
         
-        [_mapView addClusteredAnnotations:_streetLightAnnotations];
+        [_mapView addClusteredAnnotations:_streetLightAnnotations toGroup:CDStreetLightJsonFile];
         _streetLightAnnotationsAdded = [NSMutableArray arrayWithArray:_streetLightAnnotations];
-        _stepper.value = _streetLightAnnotationsAdded.count;
     }
     
     [self refreshBadges];
+    
+    [self resetsStepperValues];
 }
 
 - (IBAction)removeAll:(id)sender {
     
     if (_tabBar.selectedItem == _bathroomTabBarItem) {
-        [_mapView removeAnnotations:_bathroomAnnotationsAdded];
+        [_mapView removeAnnotations:_bathroomAnnotationsAdded fromGroup:CDToiletJsonFile];
         [_bathroomAnnotationsAdded removeAllObjects];
         
         NSLog(@"Removing All %@", CDToiletJsonFile);
     }
     else if (_tabBar.selectedItem == _streetLightsTabBarItem) {
-        [_mapView removeAnnotations:_streetLightAnnotationsAdded];
+        [_mapView removeAnnotations:_streetLightAnnotationsAdded fromGroup:CDStreetLightJsonFile];
         [_streetLightAnnotationsAdded removeAllObjects];
         
         NSLog(@"Removing All %@", CDStreetLightJsonFile);
@@ -253,7 +254,7 @@ static NSString * const kBathroomAnnotationImage = @"BathroomAnnotation";
     TSBathroomAnnotation *annotation = [_bathroomAnnotations objectAtIndex:_bathroomAnnotationsAdded.count];
     [_bathroomAnnotationsAdded addObject:annotation];
     
-    [_mapView addClusteredAnnotation:annotation];
+    [_mapView addClusteredAnnotation:annotation toGroup:CDToiletJsonFile];
 }
 
 - (void)addNewStreetLight {
@@ -267,7 +268,7 @@ static NSString * const kBathroomAnnotationImage = @"BathroomAnnotation";
     TSStreetLightAnnotation *annotation = [_streetLightAnnotations objectAtIndex:_streetLightAnnotationsAdded.count];
     [_streetLightAnnotationsAdded addObject:annotation];
     
-    [_mapView addClusteredAnnotation:annotation];
+    [_mapView addClusteredAnnotation:annotation toGroup:CDStreetLightJsonFile];
 }
 
 - (void)removeLastBathroom {
@@ -276,7 +277,7 @@ static NSString * const kBathroomAnnotationImage = @"BathroomAnnotation";
     
     TSBathroomAnnotation *annotation = [_bathroomAnnotationsAdded lastObject];
     [_bathroomAnnotationsAdded removeObject:annotation];
-    [_mapView removeAnnotation:annotation];
+    [_mapView removeAnnotation:annotation fromGroup:CDToiletJsonFile];
 }
 
 - (void)removeLastStreetLight {
@@ -285,7 +286,7 @@ static NSString * const kBathroomAnnotationImage = @"BathroomAnnotation";
     
     TSStreetLightAnnotation *annotation = [_streetLightAnnotationsAdded lastObject];
     [_streetLightAnnotationsAdded removeObject:annotation];
-    [_mapView removeAnnotation:annotation];
+    [_mapView removeAnnotation:annotation fromGroup:CDStreetLightJsonFile];
 }
 
 - (IBAction)segmentedControlValueChanged:(id)sender {

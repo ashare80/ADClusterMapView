@@ -77,6 +77,9 @@
 
 - (void)animateView {
     
+    if ([NSOperationQueue mainQueue] != [NSOperationQueue currentQueue]) {
+        NSLog(@"NotMain");
+    }
     if ([_addedView isKindOfClass:[TSRefreshedAnnotationView class]]) {
         [(TSRefreshedAnnotationView*)_addedView clusteringAnimation];
     }

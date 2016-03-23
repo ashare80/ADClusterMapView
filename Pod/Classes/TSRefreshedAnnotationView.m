@@ -25,6 +25,10 @@
 - (void)clusteringAnimation {
     
     //Subclass and add your cluster view updates to be animated here
+    
+    if ([NSOperationQueue mainQueue] != [NSOperationQueue currentQueue]) {
+        NSLog(@"NotMain");
+    }
 }
 
 

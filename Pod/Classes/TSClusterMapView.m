@@ -17,11 +17,12 @@
 #define DATA_REFRESH_MAX 1000
 
 static NSString * const kTSClusterAnnotationViewID = @"kTSClusterAnnotationViewID-private";
+static NSString * const kTSClusterMapViewRootClusterID = @"kTSClusterMapViewRootClusterID-private";
 NSString * const KDTreeClusteringProgress = @"KDTreeClusteringProgress";
 
 @interface TSClusterMapView ()
 
-
+@property (strong, nonatomic) NSMutableDictionary <NSString *, NSMutableSet <id<MKAnnotation>>*> *annotationsBygroupID;
 
 @end
 
@@ -50,6 +51,8 @@ NSString * const KDTreeClusteringProgress = @"KDTreeClusteringProgress";
 - (void)initHelpers {
     
     [self setDefaults];
+    
+    _annotationsBygroupID = [[NSMutableDictionary alloc] init];
     
     _clusterAnnotationsPool = [[NSMutableSet alloc] init];
     
@@ -145,15 +148,24 @@ NSString * const KDTreeClusteringProgress = @"KDTreeClusteringProgress";
 }
 
 - (void)needsRefresh {
-    
-    [self createKDTreeAndCluster:_clusterableAnnotationsAdded];
+    [self buildKDTreeAndCluster];
 }
 
 #pragma mark - Add/Remove Annotations
 
+- (NSMutableSet<id<MKAnnotation>> *)clusterableAnnotationsAdded {
+    
+    NSMutableSet *mutableSet = [[NSMutableSet alloc] init];
+    
+    for (NSMutableSet *set in self.annotationsBygroupID.allValues) {
+        [mutableSet unionSet:set];
+    }
+    
+    return mutableSet;
+}
 
 - (void)addAnnotation:(id<MKAnnotation>)annotation {
-    if (![_clusterableAnnotationsAdded containsObject:annotation]) {
+    if (![self.clusterableAnnotationsAdded containsObject:annotation]) {
         [super addAnnotation:annotation];
     }
 }
@@ -161,47 +173,57 @@ NSString * const KDTreeClusteringProgress = @"KDTreeClusteringProgress";
 - (void)addAnnotations:(NSArray <id<MKAnnotation>> *)annotations {
     
     NSMutableSet *annotationsToAdd = [NSMutableSet setWithArray:annotations];
-    [annotationsToAdd minusSet:_clusterableAnnotationsAdded];
+    [annotationsToAdd minusSet:self.clusterableAnnotationsAdded];
     
     if (annotationsToAdd.count) {
         [super addAnnotations:annotationsToAdd.allObjects];
     }
 }
 
-- (void)addClusteredAnnotation:(id<MKAnnotation>)annotation {
+#pragma mark - Multi Tree
+
+- (void)addClusteredAnnotation:(id<MKAnnotation>)annotation toGroup:(NSString *)groupID {
     
     BOOL refresh = NO;
     
-    if (_clusterableAnnotationsAdded.count < DATA_REFRESH_MAX) {
+    NSMutableSet *annotationsForTree = self.annotationsBygroupID[groupID];
+    
+    if (annotationsForTree.count < DATA_REFRESH_MAX) {
         refresh = YES;
     }
     
-    [self addClusteredAnnotation:annotation clusterTreeRefresh:refresh];
+    [self addClusteredAnnotation:annotation toGroup:(NSString *)groupID clusterTreeRefresh:refresh];
+    
 }
 
-- (void)addClusteredAnnotation:(id<MKAnnotation>)annotation clusterTreeRefresh:(BOOL)refresh {
+- (void)addClusteredAnnotation:annotation toGroup:(NSString *)groupID clusterTreeRefresh:(BOOL)refresh {
     
-    if (!annotation || [_clusterableAnnotationsAdded containsObject:annotation]) {
+    
+    NSMutableSet *annotationsForTree = self.annotationsBygroupID[groupID];
+    
+    if (!annotation || [annotationsForTree containsObject:annotation]) {
         return;
     }
     
-    if (_clusterableAnnotationsAdded) {
-        [_clusterableAnnotationsAdded addObject:annotation];
+    if (annotationsForTree) {
+        [annotationsForTree addObject:annotation];
     }
     else {
-        _clusterableAnnotationsAdded = [[NSMutableSet alloc] initWithObjects:annotation, nil];
+        annotationsForTree = [[NSMutableSet alloc] initWithObjects:annotation, nil];
+        self.annotationsBygroupID[groupID] = annotationsForTree;
     }
     
-    if (refresh || _treeOperationQueue.operationCount > 10) {
-        [self needsRefresh];
+    ADMapCluster *rootForID = [_rootMapCluster rootClusterForID:groupID];
+    
+    if (!rootForID || refresh || _treeOperationQueue.operationCount > 10) {
+        [self buildKDTreeAndClusterWithGroupID:groupID];
         return;
     }
-    
     
     __weak TSClusterMapView *weakSelf = self;
     [_treeOperationQueue addOperationWithBlock:^{
         //Attempt to insert in existing root cluster - will fail if small data set or an outlier
-        [_rootMapCluster mapView:self addAnnotation:[[ADMapPointAnnotation alloc] initWithAnnotation:annotation] completion:^(BOOL added) {
+        [rootForID mapView:self addAnnotation:[[ADMapPointAnnotation alloc] initWithAnnotation:annotation] completion:^(BOOL added) {
             
             TSClusterMapView *strongSelf = weakSelf;
             
@@ -209,51 +231,59 @@ NSString * const KDTreeClusteringProgress = @"KDTreeClusteringProgress";
                 [strongSelf clusterVisibleMapRectForceRefresh:YES];
             }
             else {
-                [strongSelf needsRefresh];
+                [strongSelf buildKDTreeAndClusterWithGroupID:groupID];
             }
         }];
     }];
 }
 
-- (void)addClusteredAnnotations:(NSArray <id<MKAnnotation>> *)annotations {
+- (void)addClusteredAnnotations:(NSArray <id<MKAnnotation>> *)annotations toGroup:(NSString *)groupID {
     
     if (!annotations || !annotations.count) {
         return;
     }
     
-    NSInteger count = _clusterableAnnotationsAdded.count;
+    NSMutableSet *annotationsForTree = self.annotationsBygroupID[groupID];
+    NSMutableSet *addSet = [NSMutableSet setWithArray:annotations];
     
-    if (_clusterableAnnotationsAdded) {
-        [_clusterableAnnotationsAdded unionSet:[NSSet setWithArray:annotations]];
+    NSInteger preCount = annotationsForTree.count;
+    
+    if (!annotationsForTree) {
+        annotationsForTree = addSet;
+        self.annotationsBygroupID[groupID] = annotationsForTree;
     }
     else {
-        _clusterableAnnotationsAdded = [[NSMutableSet alloc] initWithArray:annotations];
+        [annotationsForTree unionSet:addSet];
     }
     
-    if (count != _clusterableAnnotationsAdded.count) {
-        [self needsRefresh];
+    if (preCount != annotationsForTree.count) {
+        [self buildKDTreeAndClusterWithGroupID:groupID];
     }
 }
 
-- (void)removeAnnotation:(id<MKAnnotation>)annotation {
+- (void)removeAnnotation:(id<MKAnnotation>)annotation fromGroup:(NSString *)groupID  {
     
     if (!annotation) {
         return;
     }
     
-    if ([_clusterableAnnotationsAdded containsObject:annotation]) {
-        [_clusterableAnnotationsAdded removeObject:annotation];
+    
+    NSMutableSet *annotationsForTree = self.annotationsBygroupID[groupID];
+    
+    if ([annotationsForTree containsObject:annotation]) {
+        [annotationsForTree removeObject:annotation];
         
         //Small data set just rebuild
-        if (_clusterableAnnotationsAdded.count < DATA_REFRESH_MAX || _treeOperationQueue.operationCount > 10) {
-            [self needsRefresh];
+        if (annotationsForTree.count < DATA_REFRESH_MAX || _treeOperationQueue.operationCount > 10 || annotationsForTree.count == 0) {
+            [self buildKDTreeAndClusterWithGroupID:groupID];
         }
         else {
             
+            ADMapCluster *rootForID = [_rootMapCluster rootClusterForID:groupID];
             
             __weak TSClusterMapView *weakSelf = self;
             [_treeOperationQueue addOperationWithBlock:^{
-                [weakSelf.rootMapCluster mapView:self removeAnnotation:annotation completion:^(BOOL removed) {
+                [rootForID mapView:self removeAnnotation:annotation completion:^(BOOL removed) {
                     
                     TSClusterMapView *strongSelf = weakSelf;
                     
@@ -261,7 +291,7 @@ NSString * const KDTreeClusteringProgress = @"KDTreeClusteringProgress";
                         [strongSelf clusterVisibleMapRectForceRefresh:YES];
                     }
                     else {
-                        [strongSelf needsRefresh];
+                        [strongSelf buildKDTreeAndClusterWithGroupID:groupID];
                     }
                 }];
             }];
@@ -271,21 +301,54 @@ NSString * const KDTreeClusteringProgress = @"KDTreeClusteringProgress";
     [super removeAnnotation:annotation];
 }
 
-- (void)removeAnnotations:(NSArray <id<MKAnnotation>> *)annotations {
+- (void)removeAnnotations:(NSArray <id<MKAnnotation>> *)annotations fromGroup:(NSString *)groupID {
     
     if (!annotations) {
         return;
     }
     
-    NSUInteger previousCount = _clusterableAnnotationsAdded.count;
-    NSSet *set = [NSSet setWithArray:annotations];
-    [_clusterableAnnotationsAdded minusSet:set];
+    NSMutableSet *annotationsForTree = self.annotationsBygroupID[groupID];
     
-    if (_clusterableAnnotationsAdded.count != previousCount) {
-        [self needsRefresh];
+    if (!annotationsForTree) {
+        return;
+    }
+    
+    NSUInteger previousCount = annotationsForTree.count;
+    NSSet *set = [NSSet setWithArray:annotations];
+    [annotationsForTree minusSet:set];
+    
+    if (annotationsForTree.count != previousCount) {
+        [self buildKDTreeAndClusterWithGroupID:groupID];
     }
     
     [super removeAnnotations:annotations];
+}
+
+///////
+
+- (void)addClusteredAnnotation:(id<MKAnnotation>)annotation {
+    
+    [self addClusteredAnnotation:annotation toGroup:kTSClusterMapViewRootClusterID];
+}
+
+- (void)addClusteredAnnotation:(id<MKAnnotation>)annotation clusterTreeRefresh:(BOOL)refresh {
+    
+    [self addClusteredAnnotation:annotation toGroup:kTSClusterMapViewRootClusterID clusterTreeRefresh:refresh];
+}
+
+- (void)addClusteredAnnotations:(NSArray <id<MKAnnotation>> *)annotations {
+    
+    [self addClusteredAnnotations:annotations toGroup:kTSClusterMapViewRootClusterID];
+}
+
+- (void)removeAnnotation:(id<MKAnnotation>)annotation {
+    
+    [self removeAnnotation:annotation fromGroup:kTSClusterMapViewRootClusterID];
+}
+
+- (void)removeAnnotations:(NSArray <id<MKAnnotation>> *)annotations {
+
+    [self removeAnnotations:annotations fromGroup:kTSClusterMapViewRootClusterID];
 }
 
 #pragma mark - Annotations
@@ -300,7 +363,7 @@ NSString * const KDTreeClusteringProgress = @"KDTreeClusteringProgress";
 - (NSArray <ADClusterAnnotation *> *)visibleClusterAnnotations {
     NSMutableArray * displayedAnnotations = [[NSMutableArray alloc] init];
     for (ADClusterAnnotation * annotation in [_clusterAnnotationsPool copy]) {
-        if (!annotation.offscreen) {
+        if (!annotation.offMap) {
             [displayedAnnotations addObject:annotation];
         }
     }
@@ -312,7 +375,7 @@ NSString * const KDTreeClusteringProgress = @"KDTreeClusteringProgress";
     
     NSMutableSet *set = [NSMutableSet setWithArray:[super annotations]];
     [set minusSet:self.clusterAnnotations];
-    [set unionSet:_clusterableAnnotationsAdded];
+    [set unionSet:self.clusterableAnnotationsAdded];
     
     return set.allObjects;
 }
@@ -447,34 +510,112 @@ NSString * const KDTreeClusteringProgress = @"KDTreeClusteringProgress";
 
 #pragma mark - Clustering
 
-- (void)createKDTreeAndCluster:(NSSet <id<MKAnnotation>> *)annotations {
+- (void)buildKDTreeAndClusterWithGroupID:(NSString *)groupID {
     
-    if (!annotations) {
+    NSMutableDictionary <NSString *, NSMutableSet <id<MKAnnotation>>*> *annotationsForTrees = [_annotationsBygroupID copy];
+    
+    if (!annotationsForTrees.allKeys.count) {
         return;
     }
     
-    annotations = [annotations copy];
+    annotationsForTrees = [annotationsForTrees copy];
+    
+    ADMapCluster *clusterToReplace = [self.rootMapCluster rootClusterForID:groupID];
+    NSSet *annotations = [annotationsForTrees[groupID] copy];
     
     [_treeOperationQueue cancelAllOperations];
     
     __weak TSClusterMapView *weakSelf = self;
     [_treeOperationQueue addOperationWithBlock:^{
         
-        // use wrapper annotations that expose a MKMapPoint property instead of a CLLocationCoordinate2D property
+        TSClusterMapView *strongSelf = weakSelf;
+        
         NSMutableSet * mapPointAnnotations = [[NSMutableSet alloc] initWithCapacity:annotations.count];
+        
         for (id<MKAnnotation> annotation in annotations) {
             ADMapPointAnnotation * mapPointAnnotation = [[ADMapPointAnnotation alloc] initWithAnnotation:annotation];
             [mapPointAnnotations addObject:mapPointAnnotation];
         }
         
-        [ADMapCluster rootClusterForAnnotations:mapPointAnnotations mapView:self completion:^(ADMapCluster *mapCluster) {
+        if (!clusterToReplace) {
             
-            TSClusterMapView *strongSelf = weakSelf;
+            NSArray *allRootClusters = strongSelf.rootMapCluster.rootClusters;
             
-            strongSelf.rootMapCluster = mapCluster;
+            if (!self.rootMapCluster.originalMapPointAnnotations.count && !allRootClusters.count) {
+                [strongSelf buildKDTreeAndCluster];
+                return;
+            }
+            
+            if (!allRootClusters.count) {
+                allRootClusters = @[self.rootMapCluster];
+            }
+            
+            ADMapCluster *newCluster = [ADMapCluster rootClusterForAnnotations:mapPointAnnotations mapView:self groupID:groupID completion:nil];
+            strongSelf.rootMapCluster = [[ADMapCluster alloc] initWithRootClusters:[allRootClusters arrayByAddingObject:newCluster]];
+            [strongSelf clusterVisibleMapRectForceRefresh:YES];
+            return;
+        }
+        
+        [clusterToReplace rebuildWithAnnotations:mapPointAnnotations mapView:strongSelf completion:^(ADMapCluster *mapCluster) {
+            
+            if ([strongSelf.rootMapCluster.groupID isEqualToString:groupID]) {
+                strongSelf.rootMapCluster = mapCluster;
+            }
             
             [strongSelf clusterVisibleMapRectForceRefresh:YES];
         }];
+    }];
+}
+
+- (void)buildKDTreeAndCluster {
+    
+    if (!_annotationsBygroupID.allKeys.count) {
+        return;
+    }
+    
+    NSMutableDictionary <NSString *, NSMutableSet <id<MKAnnotation>>*> *annotationsForTrees = [_annotationsBygroupID copy];
+    
+    [_treeOperationQueue cancelAllOperations];
+    
+    __weak TSClusterMapView *weakSelf = self;
+    [_treeOperationQueue addOperationWithBlock:^{
+        
+        NSMutableArray *allRootClusters = [[NSMutableArray alloc] initWithCapacity:annotationsForTrees.allKeys.count];
+        
+        for (NSString *key in annotationsForTrees.allKeys) {
+            
+            NSMutableSet *annotations = [annotationsForTrees[key] copy];
+            
+            if (annotations.count == 0) {
+                continue;
+            }
+            // use wrapper annotations that expose a MKMapPoint property instead of a CLLocationCoordinate2D property
+            NSMutableSet * mapPointAnnotations = [[NSMutableSet alloc] initWithCapacity:annotations.count];
+            
+            for (id<MKAnnotation> annotation in annotations) {
+                ADMapPointAnnotation * mapPointAnnotation = [[ADMapPointAnnotation alloc] initWithAnnotation:annotation];
+                [mapPointAnnotations addObject:mapPointAnnotation];
+            }
+            
+            ADMapCluster *rootCluster = [ADMapCluster rootClusterForAnnotations:mapPointAnnotations mapView:self groupID:key completion:nil];
+            [allRootClusters addObject:rootCluster];
+        }
+        
+        
+        TSClusterMapView *strongSelf = weakSelf;
+        
+        if (allRootClusters.count <= 1) {
+            strongSelf.rootMapCluster = allRootClusters.firstObject;
+            
+            if (!strongSelf.rootMapCluster) {
+                strongSelf.rootMapCluster = [ADMapCluster rootClusterForAnnotations:nil mapView:self groupID:nil completion:nil];
+            }
+        }
+        else {
+            strongSelf.rootMapCluster = [[ADMapCluster alloc] initWithRootClusters:allRootClusters];
+        }
+        
+        [strongSelf clusterVisibleMapRectForceRefresh:YES];
     }];
 }
 
@@ -517,6 +658,8 @@ NSString * const KDTreeClusteringProgress = @"KDTreeClusteringProgress";
             [super addAnnotations:toAdd];
         }];
     }
+    
+    NSLog(@"%i", _clusterAnnotationsPool.count);
 }
 
 - (BOOL)shouldNotAnimate {
@@ -529,13 +672,9 @@ NSString * const KDTreeClusteringProgress = @"KDTreeClusteringProgress";
         return;
     }
     
-    NSDictionary *groupedRoundedLatLonAnnotations = [TSClusterOperation groupAnnotationsByLocationValue:[NSSet setWithArray:clusterAnnotation.cluster.originalAnnotations]];
-    
-    if (groupedRoundedLatLonAnnotations.allKeys.count == 1) {
-        if ([_clusterDelegate respondsToSelector:@selector(mapView:shouldForceSplitClusterAnnotation:)]) {
-            if (![_clusterDelegate mapView:self shouldForceSplitClusterAnnotation:clusterAnnotation]) {
-                return;
-            }
+    if ([_clusterDelegate respondsToSelector:@selector(mapView:shouldForceSplitClusterAnnotation:)]) {
+        if (![_clusterDelegate mapView:self shouldForceSplitClusterAnnotation:clusterAnnotation]) {
+            return;
         }
     }
     
@@ -706,7 +845,7 @@ NSString * const KDTreeClusteringProgress = @"KDTreeClusteringProgress";
 
 - (void)selectAnnotation:(id<MKAnnotation>)annotation animated:(BOOL)animated {
     
-    if ([_clusterableAnnotationsAdded containsObject:annotation]) {
+    if ([self.clusterableAnnotationsAdded containsObject:annotation]) {
         for (ADClusterAnnotation *clusterAnnotation in self.visibleClusterAnnotations) {
             if ([clusterAnnotation.originalAnnotations containsObject:annotation]) {
                 [super selectAnnotation:clusterAnnotation animated:animated];
@@ -760,7 +899,7 @@ NSString * const KDTreeClusteringProgress = @"KDTreeClusteringProgress";
     
     // only leaf clusters have annotations
     if (((ADClusterAnnotation *)annotation).type == ADClusterAnnotationTypeLeaf) {
-        annotation = [((ADClusterAnnotation *)annotation).originalAnnotations firstObject];
+        annotation = [((ADClusterAnnotation *)annotation).originalAnnotations anyObject];
         if ([_clusterDelegate respondsToSelector:@selector(mapView:viewForAnnotation:)]) {
             delegateAnnotationView = [_clusterDelegate mapView:self viewForAnnotation:annotation];
         }
@@ -775,7 +914,7 @@ NSString * const KDTreeClusteringProgress = @"KDTreeClusteringProgress";
     }
     
     //If dequeued it won't have an annotation set;
-    if (!delegateAnnotationView.annotation) {
+    if (delegateAnnotationView.annotation != annotation) {
         delegateAnnotationView.annotation = annotation;
     }
     
@@ -816,7 +955,7 @@ NSString * const KDTreeClusteringProgress = @"KDTreeClusteringProgress";
                     
                     MKCoordinateRegion region = MKCoordinateRegionForMapRect(zoomTo);
                     
-                    if (zoomTo.size.width < 3000) {
+                    if (zoomTo.size.width < 3000 || zoomTo.size.height < 3000) {
                         
                         float ratio = self.camera.altitude/self.visibleMapRect.size.width;
                         

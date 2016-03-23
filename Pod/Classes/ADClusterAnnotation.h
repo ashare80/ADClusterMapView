@@ -28,7 +28,7 @@ typedef NS_ENUM(NSUInteger, ADClusterAnnotationType) {
 @property (nonatomic, copy) NSString *title;
 @property (nonatomic, copy) NSString *subtitle;
 
-@property (readonly, nonatomic) BOOL offscreen;
+@property (readonly, nonatomic) BOOL offMap;
 
 /*!
  * @discussion Type of annotation, cluster or single.
@@ -53,7 +53,7 @@ typedef NS_ENUM(NSUInteger, ADClusterAnnotationType) {
 /*!
  * @discussion This array contains the MKAnnotation objects represented by this annotation
  */
-@property (weak, nonatomic, readonly) NSArray <id<MKAnnotation>> * originalAnnotations;
+@property (weak, nonatomic, readonly) NSSet <id<MKAnnotation>> * originalAnnotations;
 
 /*!
  * @discussion Number of annotations represented by the annotation

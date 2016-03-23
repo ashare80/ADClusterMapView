@@ -12,7 +12,7 @@
 /**
  * Do not subclass. This is a wrapper to give annotations added to cluster a map point.
  */
-@interface ADMapPointAnnotation : NSObject
+@interface ADMapPointAnnotation : NSObject <NSCopying>
 
 @property (nonatomic, readonly) MKMapPoint mapPoint;
 

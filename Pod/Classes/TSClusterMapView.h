@@ -26,7 +26,7 @@ extern NSString * const KDTreeClusteringProgress;
  * @param annotation The object representing the annotation that is about to be displayed.
  * @return The annotation view to display for the specified annotation or nil if you want to display a standard annotation view.
  */
-- (MKAnnotationView *)mapView:(TSClusterMapView *)mapView viewForClusterAnnotation:(id <MKAnnotation>)annotation;
+- (MKAnnotationView *)mapView:(TSClusterMapView *)mapView viewForClusterAnnotation:(ADClusterAnnotation *)annotation;
 
 /*!
  * @discussion MapView will begin creating Kd-tree from new annotations. Use this delegate to alert the user of a refresh for large data sets with long build times.
@@ -101,6 +101,11 @@ typedef NS_ENUM(NSInteger, ADClusterBufferSize) {
 };
 
 @interface TSClusterMapView : MKMapView <MKMapViewDelegate, UIGestureRecognizerDelegate, TSClusterMapViewDelegate>
+
+- (void)addClusteredAnnotation:(id<MKAnnotation>)annotation toGroup:(NSString *)groupID;
+- (void)addClusteredAnnotations:(NSArray <id<MKAnnotation>> *)annotations toGroup:(NSString *)groupID;
+- (void)removeAnnotations:(NSArray <id<MKAnnotation>> *)annotations fromGroup:(NSString *)groupID;
+- (void)removeAnnotation:(id<MKAnnotation>)annotation fromGroup:(NSString *)groupID;
 
 /*!
  * @discussion Adds an annotation to the map and clusters if needed (threadsafe). Only rebuilds entire cluster tree if there are less than 1000 clustered annotations or the annotation coordinate is an outlier from current clustered data set.

@@ -17,7 +17,7 @@
     self = [super init];
     if (self) {
         _cluster = nil;
-        self.coordinate = [self offscreenCoordinate];
+        self.coordinate = [self offMapCoordinate];
         _shouldBeRemovedAfterAnimation = NO;
         _title = @"Title";
     }
@@ -52,32 +52,32 @@
 
 - (void)reset {
     self.cluster = nil;
-    self.coordinate = [self offscreenCoordinate];
+    self.coordinate = [self offMapCoordinate];
 }
 
 - (void)shouldReset {
     self.cluster = nil;
-    self.coordinatePreAnimation = [self offscreenCoordinate];
+    self.coordinatePreAnimation = [self offMapCoordinate];
 }
 
-- (CLLocationCoordinate2D)offscreenCoordinate {
+- (CLLocationCoordinate2D)offMapCoordinate {
     
-    CLLocationCoordinate2D coordinate = CLLocationCoordinate2DMake(MAXFLOAT, MAXFLOAT);
+    CLLocationCoordinate2D coordinate;// = CLLocationCoordinate2DMake(MAXFLOAT, MAXFLOAT);
     
-    if (!SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(@"8.0")) {
+//    if (!SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(@"8.0")) {
         coordinate = CLLocationCoordinate2DMake(85.0, 179.0);
         // this coordinate puts the annotation on the top right corner of the map. We use this instead of kCLLocationCoordinate2DInvalid so that we don't mess with MapKit's KVO weird behaviour that removes from the map the annotations whose coordinate was set to kCLLocationCoordinate2DInvalid.
-    }
+//    }
     
     return coordinate;
 }
 
-- (BOOL)offscreen {
-    CLLocationCoordinate2D offscreen = [self offscreenCoordinate];
-    return (self.coordinate.latitude == offscreen.latitude && self.coordinate.longitude == offscreen.longitude);
+- (BOOL)offMap {
+    CLLocationCoordinate2D offMapCoordinate = [self offMapCoordinate];
+    return (self.coordinate.latitude == offMapCoordinate.latitude && self.coordinate.longitude == offMapCoordinate.longitude);
 }
 
-- (NSArray <id<MKAnnotation>> *)originalAnnotations {
+- (NSSet <id<MKAnnotation>> *)originalAnnotations {
     NSAssert(self.cluster != nil, @"This annotation should have a cluster assigned!");
     return self.cluster.originalAnnotations;
 }
