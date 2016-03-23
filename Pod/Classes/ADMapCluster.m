@@ -779,8 +779,16 @@ static NSString * const kTSClusterMapViewRootMultiClusterID = @"kTSClusterMapVie
 #pragma mark Tree Relations
 
 - (BOOL)isAncestorOf:(ADMapCluster *)mapCluster {
-    return _depth < mapCluster.depth && (_leftChild == mapCluster || _rightChild == mapCluster || [_leftChild isAncestorOf:mapCluster] || [_rightChild isAncestorOf:mapCluster]);
+    
+    BOOL sameGroup = [self.groupID isEqualToString:kTSClusterMapViewRootMultiClusterID] || [mapCluster.groupID isEqualToString:self.groupID];
+    
+    if (!sameGroup) {
+        return NO;
+    }
+    
+    return sameGroup && _depth < mapCluster.depth && (_leftChild == mapCluster || _rightChild == mapCluster || [_leftChild isAncestorOf:mapCluster] || [_rightChild isAncestorOf:mapCluster]);
 }
+
 
 - (BOOL)isRootClusterForAnnotation:(id<MKAnnotation>)annotation {
     return _annotation.annotation == annotation || [_leftChild isRootClusterForAnnotation:annotation] || [_rightChild isRootClusterForAnnotation:annotation];

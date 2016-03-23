@@ -17,7 +17,7 @@
     self = [super init];
     if (self) {
         _cluster = nil;
-        self.coordinate = [self offscreenCoordinate];
+        self.coordinate = [self offMapCoordinate];
         _shouldBeRemovedAfterAnimation = NO;
         _title = @"Title";
     }
@@ -52,15 +52,15 @@
 
 - (void)reset {
     self.cluster = nil;
-    self.coordinate = [self offscreenCoordinate];
+    self.coordinate = [self offMapCoordinate];
 }
 
 - (void)shouldReset {
     self.cluster = nil;
-    self.coordinatePreAnimation = [self offscreenCoordinate];
+    self.coordinatePreAnimation = [self offMapCoordinate];
 }
 
-- (CLLocationCoordinate2D)offscreenCoordinate {
+- (CLLocationCoordinate2D)offMapCoordinate {
     
     CLLocationCoordinate2D coordinate;// = CLLocationCoordinate2DMake(MAXFLOAT, MAXFLOAT);
     
@@ -72,9 +72,9 @@
     return coordinate;
 }
 
-- (BOOL)offscreen {
-    CLLocationCoordinate2D offscreen = [self offscreenCoordinate];
-    return (self.coordinate.latitude == offscreen.latitude && self.coordinate.longitude == offscreen.longitude);
+- (BOOL)offMap {
+    CLLocationCoordinate2D offMapCoordinate = [self offMapCoordinate];
+    return (self.coordinate.latitude == offMapCoordinate.latitude && self.coordinate.longitude == offMapCoordinate.longitude);
 }
 
 - (NSSet <id<MKAnnotation>> *)originalAnnotations {

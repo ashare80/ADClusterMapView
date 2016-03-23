@@ -28,7 +28,7 @@ typedef NS_ENUM(NSUInteger, ADClusterAnnotationType) {
 @property (nonatomic, copy) NSString *title;
 @property (nonatomic, copy) NSString *subtitle;
 
-@property (readonly, nonatomic) BOOL offscreen;
+@property (readonly, nonatomic) BOOL offMap;
 
 /*!
  * @discussion Type of annotation, cluster or single.

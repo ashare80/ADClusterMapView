@@ -33,6 +33,7 @@ blue:((float)(rgbValue & 0xFF))/255.0 alpha:1.0]
             self.label.textColor = UIColorFromRGB(0x6fc99d);
         }
         else {
+            NSLog(@"Error Grouping: %@, %@, %@", annotation, annotation.cluster, annotation.cluster.groupID);
             self.image = [UIImage imageNamed:@"ClusterAnnotation"];
             self.label.textColor = UIColorFromRGB(0x009fd6);
         }
@@ -69,6 +70,7 @@ blue:((float)(rgbValue & 0xFF))/255.0 alpha:1.0]
         self.label.textColor = UIColorFromRGB(0x6fc99d);
     }
     else {
+        NSLog(@"Error Grouping: %@, %@, %@", clusterAnnotation, clusterAnnotation.cluster, clusterAnnotation.cluster.groupID);
         self.image = [UIImage imageNamed:@"ClusterAnnotation"];
         self.label.textColor = UIColorFromRGB(0x009fd6);
     }

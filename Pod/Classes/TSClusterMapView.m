@@ -363,7 +363,7 @@ NSString * const KDTreeClusteringProgress = @"KDTreeClusteringProgress";
 - (NSArray <ADClusterAnnotation *> *)visibleClusterAnnotations {
     NSMutableArray * displayedAnnotations = [[NSMutableArray alloc] init];
     for (ADClusterAnnotation * annotation in [_clusterAnnotationsPool copy]) {
-        if (!annotation.offscreen) {
+        if (!annotation.offMap) {
             [displayedAnnotations addObject:annotation];
         }
     }
@@ -658,6 +658,8 @@ NSString * const KDTreeClusteringProgress = @"KDTreeClusteringProgress";
             [super addAnnotations:toAdd];
         }];
     }
+    
+    NSLog(@"%i", _clusterAnnotationsPool.count);
 }
 
 - (BOOL)shouldNotAnimate {
@@ -912,7 +914,7 @@ NSString * const KDTreeClusteringProgress = @"KDTreeClusteringProgress";
     }
     
     //If dequeued it won't have an annotation set;
-    if (!delegateAnnotationView.annotation) {
+    if (delegateAnnotationView.annotation != annotation) {
         delegateAnnotationView.annotation = annotation;
     }
     
