@@ -4,7 +4,7 @@ Animated annotation clustering MKMapView subclass based off of [ADClusterMapView
 
 [ADClusterMapView]: https://github.com/applidium/ADClusterMapView
 
-[![CI Status](http://img.shields.io/travis/Adam Share/TSClusterMapView.svg?style=flat)](https://travis-ci.org/Adam Share/TSClusterMapView)
+[![CI Status](http://img.shields.io/travis/ashare80/TSClusterMapView.svg?style=flat)](https://travis-ci.org/ashare80/TSClusterMapView)
 [![Version](https://img.shields.io/cocoapods/v/TSClusterMapView.svg?style=flat)](http://cocoadocs.org/docsets/TSClusterMapView)
 [![License](https://img.shields.io/cocoapods/l/TSClusterMapView.svg?style=flat)](http://cocoadocs.org/docsets/TSClusterMapView)
 [![Platform](https://img.shields.io/cocoapods/p/TSClusterMapView.svg?style=flat)](http://cocoadocs.org/docsets/TSClusterMapView)

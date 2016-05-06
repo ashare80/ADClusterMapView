@@ -6,37 +6,41 @@
 //  Copyright (c) 2014 Adam Share. All rights reserved.
 //
 
+#import "TSStreetLightAnnotation.h"
+#import <TSClusterMapView/TSClusterMapView.h>
+
+@interface TSClusterMapView (Tree)
+
+- (void)createKDTreeAndCluster:(NSSet <id<MKAnnotation>> *)annotations completion:(KdtreeCompletionBlock)completion;
+
+@end
+
 SpecBegin(InitialSpecs)
 
-describe(@"these will fail", ^{
-
-    it(@"can do maths", ^{
-        expect(1).to.equal(2);
-    });
-
-    it(@"can read", ^{
-        expect(@"number").to.equal(@"string");
-    });
+describe(@"KD Tree Build", ^{
     
-    it(@"will wait and fail", ^AsyncBlock {
+    TSClusterMapView *mapView = [[TSClusterMapView alloc] initWithFrame:CGRectMake(0, 0, 200, 500)];
+    
+//    it(@"", ^{
+//    });
+    
+    it(@"Cluster street lights", ^AsyncBlock {
         
-    });
-});
-
-describe(@"these will pass", ^{
-    
-    it(@"can do maths", ^{
-        expect(1).beLessThan(23);
-    });
-    
-    it(@"can read", ^{
-        expect(@"team").toNot.contain(@"I");
-    });
-    
-    it(@"will wait and succeed", ^AsyncBlock {
-        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW, 0), ^{
-            done();
-        });
+        [[NSOperationQueue new] addOperationWithBlock:^{
+            NSData * JSONData = [NSData dataWithContentsOfFile:[[NSBundle mainBundle] pathForResource:@"CDStreetlights" ofType:@"json"]];
+            
+            NSMutableSet *mutableSet = [[NSMutableSet alloc] init];
+            for (NSDictionary * annotationDictionary in [NSJSONSerialization JSONObjectWithData:JSONData options:kNilOptions error:NULL]) {
+                TSStreetLightAnnotation * annotation = [[TSStreetLightAnnotation alloc] initWithDictionary:annotationDictionary];
+                [mutableSet addObject:annotation];
+            }
+            
+            [mapView createKDTreeAndCluster:mutableSet completion:^(ADMapCluster *mapCluster) {
+                if (mapCluster) {
+                    done();
+                }
+            }];
+        }];
     });
 });
 

@@ -22,9 +22,6 @@ NSString * const KDTreeClusteringProgress = @"KDTreeClusteringProgress";
 
 @interface TSClusterMapView ()
 
-@property (nonatomic) MKCoordinateRegion lastKnownRegion;
-@property (atomic) NSOperation *refreshOperation;
-
 @end
 
 
@@ -157,18 +154,7 @@ NSString * const KDTreeClusteringProgress = @"KDTreeClusteringProgress";
 }
 
 - (void)needsRefresh {
-    if (self.refreshOperation == nil) {
-        __weak typeof(self) weakSelf = self;
-        NSBlockOperation *operation = [NSBlockOperation blockOperationWithBlock:^{
-            typeof(self) strongSelf = weakSelf;
-            if (strongSelf) {
-                [strongSelf createKDTreeAndCluster:strongSelf->_clusterableAnnotationsAdded];
-                strongSelf.refreshOperation = nil;
-            }
-        }];
-        self.refreshOperation = operation;
-        [[NSOperationQueue mainQueue] addOperation:operation];
-    }
+    [self createKDTreeAndCluster:_clusterableAnnotationsAdded completion:nil];
 }
 
 #pragma mark - Add/Remove Annotations
@@ -476,7 +462,7 @@ NSString * const KDTreeClusteringProgress = @"KDTreeClusteringProgress";
 
 #pragma mark - Clustering
 
-- (void)createKDTreeAndCluster:(NSSet <id<MKAnnotation>> *)annotations {
+- (void)createKDTreeAndCluster:(NSSet <id<MKAnnotation>> *)annotations completion:(KdtreeCompletionBlock)completion {
     
     if (!annotations) {
         return;
@@ -503,6 +489,10 @@ NSString * const KDTreeClusteringProgress = @"KDTreeClusteringProgress";
             strongSelf.rootMapCluster = mapCluster;
             
             [strongSelf clusterVisibleMapRectForceRefresh:YES];
+            
+            if (completion) {
+                completion(mapCluster);
+            }
         }];
     }];
 }
@@ -685,10 +675,6 @@ NSString * const KDTreeClusteringProgress = @"KDTreeClusteringProgress";
 }
 
 - (void)mapView:(MKMapView *)mapView regionDidChangeAnimated:(BOOL)animated {
-    if (MKCoordinateRegionIsEqual(mapView.region, self.lastKnownRegion)) {
-        return;
-    }
-    self.lastKnownRegion = mapView.region;
     [self clusterVisibleMapRectForceRefresh:NO];
     
     if ([_clusterDelegate respondsToSelector:@selector(mapView:regionDidChangeAnimated:)]) {

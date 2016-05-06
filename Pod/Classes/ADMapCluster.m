@@ -102,18 +102,6 @@
         } else {
             self.annotation = nil;
             
-            // Principal Component Analysis
-            // If cov(x,y) = ∑(x-x_mean) * (y-y_mean) != 0 (covariance different from zero), we are looking for the following principal vector:
-            // a (aX)
-            //   (aY)
-            //
-            // x_ = x - x_mean ; y_ = y - y_mean
-            //
-            // aX = cov(x_,y_)
-            //
-            //
-            // aY = 0.5/n * ( ∑(x_^2) + ∑(y_^2) + sqrt( (∑(x_^2) + ∑(y_^2))^2 + 4 * cov(x_,y_)^2 ) )
-            
             MKMapPoint centerMapPoint = [self meanCoordinateForAnnotations:annotations gamma:gamma];
             _clusterCoordinate = MKCoordinateForMapPoint(centerMapPoint);
             
@@ -137,6 +125,18 @@
 - (NSArray <NSArray <ADMapPointAnnotation *>*>*)splitAnnotations:(NSSet <ADMapPointAnnotation *> *)annotations centerPoint:(MKMapPoint)center {
     
     // compute coefficients
+    
+    // Principal Component Analysis
+    // If cov(x,y) = ∑(x-x_mean) * (y-y_mean) != 0 (covariance different from zero), we are looking for the following principal vector:
+    // a (aX)
+    //   (aY)
+    //
+    // x_ = x - x_mean ; y_ = y - y_mean
+    //
+    // aX = cov(x_,y_)
+    //
+    //
+    // aY = 0.5/n * ( ∑(x_^2) + ∑(y_^2) + sqrt( (∑(x_^2) + ∑(y_^2))^2 + 4 * cov(x_,y_)^2 ) )
     
     double sumXsquared = 0.0;
     double sumYsquared = 0.0;
