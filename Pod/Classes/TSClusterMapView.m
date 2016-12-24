@@ -47,7 +47,9 @@ NSString * const KDTreeClusteringProgress = @"KDTreeClusteringProgress";
 }
 
 - (void)initHelpers {
-    
+    if(_clusterAnnotationsPool)
+        [_clusterAnnotationsPool removeAllObjects];
+
     [self setDefaults];
     
     _clusterAnnotationsPool = [[NSMutableSet alloc] init];
