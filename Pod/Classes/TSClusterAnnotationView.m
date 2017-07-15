@@ -65,6 +65,7 @@
     self.selected = annotationView.selected;
     self.leftCalloutAccessoryView = annotationView.leftCalloutAccessoryView;
     self.rightCalloutAccessoryView = annotationView.rightCalloutAccessoryView;
+    self.detailCalloutAccessoryView = annotationView.detailCalloutAccessoryView;
     self.draggable = annotationView.isDraggable;
     
     return viewToCache;
